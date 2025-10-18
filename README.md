@@ -4,8 +4,7 @@
 
 A smart, structure-aware, Git-based FTP deployer with a GUI. It automatically detects changed files from your commits to upload or delete, making deployments to shared hosting a breeze.
 
-![App Screenshot]([[https://raw.githubusercontent.com/ridzidev/smart-git-ftp-deployer/main/screenshot.png](https://raw.githubusercontent.com/ridzidev/smart-git-ftp-deployer/refs/heads/main/screenshoot.png)](https://raw.githubusercontent.com/ridzidev/smart-git-ftp-deployer/refs/heads/main/screenshoot.png)) 
-
+![alt text](https://raw.githubusercontent.com/ridzidev/smart-git-ftp-deployer/refs/heads/main/screenshoot.png)
 ---
 
 ## 😩 Masalah: Deployment Manual via FTP yang Melelahkan

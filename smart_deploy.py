@@ -41,6 +41,7 @@ CLR_DANGER = "#DA3633"    # Error Red
 CLR_TEXT = "#C9D1D9"      # Main Text
 CLR_TEXT_DIM = "#8B949E"  # Muted Text
 CLR_HASH = "#D2A8FF"      # Purple Hash
+CLR_QUICK = "#F2A742"     # Gold/Orange for Quick Deploy
 
 # ================= UTILS & LOGIC =================
 
@@ -263,6 +264,8 @@ class App(tk.Tk):
         self.style.configure("TButton", padding=6, font=("Segoe UI Bold", 9))
         self.style.configure("Accent.TButton", background=CLR_ACCENT, foreground=CLR_BG)
         self.style.configure("Deploy.TButton", background=CLR_SUCCESS, foreground=CLR_TEXT, font=("Segoe UI Bold", 10))
+        # Style Baru Untuk Tombol Canggih
+        self.style.configure("Quick.TButton", background=CLR_QUICK, foreground=CLR_BG, font=("Segoe UI Black", 10))
 
     def init_git(self):
         try: self.git = GitManager(self.config_data["LOCAL_DIR"])
@@ -305,6 +308,10 @@ class App(tk.Tk):
         
         ttk.Label(cmd_bar, text="GIT HISTORY", font=("Segoe UI Black", 12), foreground=CLR_ACCENT).pack(side=tk.LEFT)
         
+        # === TOMBOL PALING CANGGIH ===
+        self.btn_quick_deploy = ttk.Button(cmd_bar, text="⚡ QUICK DEPLOY (LATEST)", command=self.quick_auto_deploy, style="Quick.TButton")
+        self.btn_quick_deploy.pack(side=tk.RIGHT, padx=5)
+
         self.btn_deploy = ttk.Button(cmd_bar, text="🚀 START DEPLOY", command=self.start_deploy, state=tk.DISABLED, style="Deploy.TButton")
         self.btn_deploy.pack(side=tk.RIGHT, padx=5)
         
@@ -341,6 +348,46 @@ class App(tk.Tk):
         self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         if self.git: self.load_commits()
+
+    # === LOGIC TOMBOL CANGGIH ===
+    def quick_auto_deploy(self):
+        """Logic: Refresh, Ambil Paling Baru, Langsung Deploy."""
+        if not self.git:
+            log_queue.put("❌ Error: Git Manager belum siap.")
+            return
+        
+        log_queue.put("⚡ Menjalankan Quick Deploy (Otomatis)...")
+        
+        # 1. Refresh History
+        self.load_commits()
+        
+        if not self.commits_data:
+            log_queue.put("❌ Gagal: Tidak ada history commit.")
+            return
+
+        # 2. Ambil commit paling atas (index 0 adalah yang paling baru)
+        latest_commit = self.commits_data[0]
+        latest_hash = latest_commit['hash']
+        log_queue.put(f"✅ Mendeteksi Commit Terbaru: {latest_hash[:8]} - {latest_commit['subject']}")
+
+        # 3. Hitung Perubahan (Manual Trigger on_commit_select logic)
+        self.commit_tree.selection_set(latest_hash)
+        self.files_to_process = self.git.get_changed_files(latest_hash, latest_hash, self.config_data["EXCLUDE_PATTERNS"])
+        
+        # Update UI Staged Files
+        self.file_tree.delete(*self.file_tree.get_children())
+        maps = self.config_data.get("PATH_MAPPINGS", [])
+        for f in self.files_to_process['added_modified']:
+            self.file_tree.insert("", "end", values=("UPLOAD", resolve_remote_path(f, maps)))
+        for f in self.files_to_process['deleted']:
+            self.file_tree.insert("", "end", values=("DELETE", resolve_remote_path(f, maps)))
+
+        # 4. Langsung Deploy
+        if self.files_to_process['added_modified'] or self.files_to_process['deleted']:
+            log_queue.put("🚀 Melakukan push otomatis ke server...")
+            threading.Thread(target=self.worker_deploy, daemon=True).start()
+        else:
+            log_queue.put("ℹ️ Tidak ada file baru yang perlu di-deploy.")
 
     def setup_browser_tab(self):
         paned = ttk.PanedWindow(self.tab_browser, orient=tk.HORIZONTAL)

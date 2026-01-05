@@ -344,6 +344,12 @@ class App(tk.Tk):
         console_frame = ttk.LabelFrame(main_paned, text=" DEPLOYMENT CONSOLE ")
         main_paned.add(console_frame, weight=1)
         
+        # --- SUNTIKAN: LOG BAR UNTUK TOMBOL CLEAR ---
+        log_bar = ttk.Frame(console_frame)
+        log_bar.pack(fill=tk.X, padx=5, pady=(2, 0))
+        ttk.Button(log_bar, text="🧹 CLEAR LOG", command=self.clear_logs).pack(side=tk.RIGHT)
+        # --------------------------------------------
+
         self.log_text = scrolledtext.ScrolledText(console_frame, state='disabled', font=("Consolas", 10), bg="#010409", fg="#3FB950", borderwidth=0)
         self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
@@ -388,6 +394,13 @@ class App(tk.Tk):
             threading.Thread(target=self.worker_deploy, daemon=True).start()
         else:
             log_queue.put("ℹ️ Tidak ada file baru yang perlu di-deploy.")
+
+    # === SUNTIKAN: FUNGSI CLEAR LOG ===
+    def clear_logs(self):
+        """Membersihkan semua teks di terminal console."""
+        self.log_text.config(state='normal')
+        self.log_text.delete('1.0', tk.END)
+        self.log_text.config(state='disabled')
 
     def setup_browser_tab(self):
         paned = ttk.PanedWindow(self.tab_browser, orient=tk.HORIZONTAL)

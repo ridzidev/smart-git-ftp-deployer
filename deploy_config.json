@@ -1,0 +1,14 @@
+{
+  "FTP_HOST": "ftp.primaginary.id",
+  "FTP_USER": "admin@learning.primaginary.id",
+  "FTP_PASS": "ribzih-Sebryv-tuzxo0",
+  "LOCAL_DIR": "/Users/alfa/Documents/from_primaginary_my_id",
+  "REMOTE_DIR": "/learning.primaginary.id",
+  "EXCLUDE_PATTERNS": [],
+  "PATH_MAPPINGS": [
+    {
+      "local": "laravel/",
+      "remote": ""
+    }
+  ]
+}

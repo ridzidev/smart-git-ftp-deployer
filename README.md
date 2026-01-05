@@ -4,11 +4,12 @@
 
 A smart, structure-aware, Git-based FTP deployer with a GUI. It automatically detects changed files from your commits to upload or delete, making deployments to shared hosting a breeze.
 
-v2.0
+**v2.1 (Quick Deploy & Browser Edition)**
 
 ![alt text](https://raw.githubusercontent.com/ridzidev/smart-git-ftp-deployer/refs/heads/main/screenshoot1.png)
 
 v.1
+
 ![alt text](https://raw.githubusercontent.com/ridzidev/smart-git-ftp-deployer/refs/heads/main/screenshoot.png)
 ---
 
@@ -23,33 +24,33 @@ Deploy ke *shared hosting* seringkali berarti kita harus kembali ke metode uploa
 
 Jika ya, alat ini dibuat untuk Anda.
 
-## ✨ Solusi: Cara Deploy yang Lebih Cerdas
+## ✨ Solusi: Cara Deploy yang Lebih Cerdas (Update v2.1)
 
 **Smart Git-FTP Deployer** menjembatani kekuatan **Git** dengan keterbatasan **FTP**. Aplikasi ini menggunakan riwayat *commit* di repositori Anda sebagai "sumber kebenaran" untuk menentukan dengan tepat apa saja yang perlu diubah di server Anda.
 
-Tidak ada lagi tebak-tebakan, tidak ada lagi upload penuh yang membuang waktu.
+### Fitur Unggulan v2.1
 
-### Fitur Unggulan
-
--   ✅ **Deploy Berbasis Commit:** Cukup pilih satu atau beberapa commit, dan aplikasi akan secara otomatis menghitung perbedaannya.
--   ✅ **Sinkronisasi Cerdas:** Tidak hanya meng-upload, aplikasi ini juga akan **menghapus** file di server yang telah Anda hapus di repositori lokal.
--   ✅ **Antarmuka Grafis (GUI):** Tampilan yang bersih dan sederhana untuk melihat commit terbaru, meninjau daftar file yang akan diproses, dan memantau log deployment secara *real-time*.
--   ✅ **Pola Pengecualian (Exclude):** Konfigurasikan dengan mudah file dan folder yang ingin diabaikan saat deployment (misalnya: `.git`, `node_modules`, `.env`, `storage`).
--   ✅ **File Konfigurasi:** Semua pengaturan (kredensial FTP, path, daftar pengecualian) disimpan dalam satu file `deploy_config.json` yang mudah dikelola.
--   ✅ **Tinjauan Pra-Deployment:** Lihat dengan jelas file mana yang akan diunggah dan mana yang akan dihapus **sebelum** Anda menekan tombol deploy.
+-   ✅ **⚡ Quick Deploy (Latest):** Fitur paling canggih. Satu klik untuk otomatis Refresh, mengambil commit paling baru, dan langsung melakukan deployment tanpa perlu memilih manual.
+-   ✅ **📂 Integrated FTP Browser:** Telusuri file di server FTP Anda secara langsung di dalam aplikasi (Explore & View remote structure).
+-   ✅ **🗺️ Path Mapping Logic:** Mendukung pemetaan folder. Anda bisa memetakan folder lokal (misal: `dist/` atau `build/`) ke folder remote yang berbeda secara spesifik.
+-   ✅ **Deploy Berbasis Commit:** Pilih satu atau rentang beberapa commit sekaligus untuk menghitung perbedaan file.
+-   ✅ **Sinkronisasi Cerdas:** Otomatis mendeteksi file yang harus di-upload (**Added/Modified**) dan file yang harus dihapus (**Deleted**) di server.
+-   ✅ **Antarmuka Grafis (GUI) Modern:** UI gelap (Cyberpunk 2026 style) yang nyaman di mata untuk memantau log secara real-time.
+-   ✅ **🧹 Clear Log:** Bersihkan terminal log deployment dengan satu tombol untuk menjaga tampilan tetap rapi.
+-   ✅ **Pola Pengecualian (Exclude):** Abaikan file/folder sensitif atau sampah seperti `.git`, `node_modules`, atau `.env`.
 
 ## 🎯 Siapa yang Seharusnya Menggunakan Ini?
 
--   **Web developer** yang melakukan deployment ke **shared hosting** atau server lain yang hanya menyediakan akses FTP.
--   Developer yang menggunakan **Git** sebagai sistem kontrol versi utama.
--   Siapa saja yang ingin mengotomatiskan alur kerja deployment mereka dan mengurangi risiko kesalahan manual.
+-   **Web developer** yang melakukan deployment ke **shared hosting** (cPanel/DirectAdmin) yang hanya menyediakan akses FTP.
+-   Developer yang ingin kecepatan CI/CD tanpa setup server yang rumit.
+-   Siapa saja yang ingin meminimalisir kesalahan "salah upload file" saat rilis fitur baru.
 
 ## 🚀 Panduan Memulai
 
 ### Prasyarat
 
 -   **Python 3.x** terpasang di sistem Anda.
--   **Git** terpasang dan dapat diakses dari command line/terminal.
+-   **Git** terpasang dan repositori lokal sudah di-init (`git init`).
 
 ### Instalasi & Penggunaan
 
@@ -60,31 +61,30 @@ Tidak ada lagi tebak-tebakan, tidak ada lagi upload penuh yang membuang waktu.
     ```
 
 2.  **Konfigurasi Proyek Anda**
-    Aplikasi ini menggunakan file `deploy_config.json` untuk semua pengaturan. Anda dapat:
-    -   **Menjalankan skrip terlebih dahulu:** `python smart_deploy.py`. File konfigurasi default akan dibuat.
-    -   **Mengedit via aplikasi:** Buka tab "Configuration" di dalam aplikasi untuk mengisi detail Anda.
+    - Jalankan aplikasi: `python smart_deploy.py`.
+    - Pergi ke tab **"Configuration"**.
+    - Isi Host, User, Password FTP, serta direktori lokal dan remote.
+    - (Opsional) Tambahkan **Path Mapping** jika folder lokal dan remote Anda tidak simetris.
+    - Klik **Save Configuration**.
 
-3.  **Jalankan Aplikasi**
-    ```bash
-    python smart_deploy.py
-    ```
+3.  **Cara Deploy Cepat (Quick Mode)**
+    - Klik tombol **"⚡ QUICK DEPLOY (LATEST)"**.
+    - Aplikasi akan mengambil perubahan terbaru dari commit terakhir dan langsung mengirimnya ke server.
 
-4.  **Deploy!**
-    -   Aplikasi akan memuat commit terbaru dari direktori proyek Anda (yang diatur di `LOCAL_DIR`).
-    -   Pilih satu atau beberapa commit yang ingin Anda deploy. Daftar file yang berubah akan muncul secara otomatis.
-    -   Tinjau daftar file yang akan diunggah atau dihapus.
-    -   Klik tombol **"Deploy Selected Commits"**. Selesai!
+4.  **Cara Deploy Manual (Selection Mode)**
+    - Pilih commit-commit tertentu di tabel Git History.
+    - Tinjau file di tabel "Staged for Deploy".
+    - Klik **"🚀 START DEPLOY"**.
 
 ## ⚙️ Detail Konfigurasi (`deploy_config.json`)
 
-Berikut adalah penjelasan untuk setiap field di file konfigurasi:
-
--   `FTP_HOST`: Hostname server FTP Anda (contoh: `ftp.domainanda.com`).
--   `FTP_USER`: Username FTP Anda.
--   `FTP_PASS`: Password FTP Anda.
--   `LOCAL_DIR`: Path ke direktori proyek lokal Anda (folder yang berisi `.git`). Gunakan `.` jika skrip berada di root proyek.
--   `REMOTE_DIR`: Direktori tujuan di server FTP (contoh: `/public_html/`).
--   `EXCLUDE_PATTERNS`: Daftar file dan direktori yang ingin diabaikan. Skrip akan memeriksa apakah path file *dimulai dengan* salah satu pola ini.
+-   `FTP_HOST`: Hostname server FTP (contoh: `ftp.domainanda.com`).
+-   `FTP_USER`: Username FTP.
+-   `FTP_PASS`: Password FTP.
+-   `LOCAL_DIR`: Path folder proyek lokal (yang ada folder `.git`).
+-   `REMOTE_DIR`: Folder tujuan di server (contoh: `/public_html/`).
+-   `PATH_MAPPINGS`: List pemetaan folder lokal ke remote.
+-   `EXCLUDE_PATTERNS`: Daftar file yang dilarang di-upload.
 
 ## 🤝 Berkontribusi
 

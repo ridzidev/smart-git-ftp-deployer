@@ -193,11 +193,28 @@ class FTPDeployer:
     def upload_file(self, local_rel_path):
         local_abs = self.local_dir / local_rel_path
         final_remote_path = resolve_remote_path(local_rel_path, self.mappings)
-        self._log(f"⬆️ UP: {local_rel_path} -> {final_remote_path}")
+        
+        # Dapatkan ukuran file untuk hitung persen
+        filesize = os.path.getsize(local_abs)
+        uploaded_bytes = 0
+        last_percent = -1
+
+        def progress_callback(data):
+            nonlocal uploaded_bytes, last_percent
+            uploaded_bytes += len(data)
+            percent = int((uploaded_bytes / filesize) * 100)
+            
+            # Agar tidak spam log, kita hanya log setiap naik 10% atau saat selesai
+            if percent % 10 == 0 and percent != last_percent:
+                self._log(f"   [ {percent}% ] {local_rel_path}")
+                last_percent = percent
+
+        self._log(f"⬆️ UP: {local_rel_path} ({filesize / 1024 / 1024:.2f} MB)")
         try:
             self.ensure_remote_dir(final_remote_path)
             with open(local_abs, 'rb') as f:
-                self.ftp.storbinary(f'STOR {final_remote_path}', f)
+                # Tambahkan callback di sini
+                self.ftp.storbinary(f'STOR {final_remote_path}', f, callback=progress_callback)
             return True
         except Exception as e:
             self._log(f"❌ ERROR Upload {final_remote_path}: {e}")
@@ -743,6 +760,24 @@ class App(tk.Tk):
     def on_commit_select(self, event):
         sel = self.commit_tree.selection()
         if not sel: return
+
+        # --- FITUR BARU: COPY TO CLIPBOARD ---
+        # Mengambil baris yang sedang difokuskan/diklik oleh user
+        focused = self.commit_tree.focus()
+        if focused:
+            vals = self.commit_tree.item(focused, "values")
+            if vals:
+                # Menggabungkan Hash, Date, dan Message menjadi satu string
+                copy_text = f"{vals[0]} | {vals[1]} | {vals[2]}"
+                
+                # Memasukkan ke dalam clipboard sistem
+                self.clipboard_clear()
+                self.clipboard_append(copy_text)
+                self.update() # Perintah penting agar clipboard tetap tersimpan di OS
+                
+                # Memberikan feedback visual ke Terminal Log
+                log_queue.put(f"📋 Info dicopy ke clipboard: {vals[0]}")
+        # --------------------------------------
         # Range: oldest selected to newest selected
         start, end = sel[-1], sel[0]
         self.files_to_process = self.git.get_changed_files(start, end, self.config_data["EXCLUDE_PATTERNS"])

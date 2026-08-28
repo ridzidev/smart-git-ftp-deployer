@@ -8,7 +8,7 @@ import time
 import subprocess
 import threading
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, filedialog
+from tkinter import ttk, scrolledtext, messagebox, filedialog, simpledialog
 from pathlib import Path
 from queue import Queue
 import json
@@ -43,37 +43,73 @@ CLR_TEXT_DIM = "#8B949E"  # Muted Text
 CLR_HASH = "#D2A8FF"      # Purple Hash
 CLR_QUICK = "#F2A742"     # Gold/Orange for Quick Deploy
 
-# ================= UTILS & LOGIC =================
+# ================= UTILS & MULTI-CONFIG STORE =================
 
 log_queue = Queue()
 
-def load_config():
+def load_config_store():
+    """
+    Memuat store konfigurasi (multi-profile).
+    Mendukung format lama (single-config) dan otomatis mengubahnya ke multi-profile.
+    """
     script_dir = Path(__file__).parent.resolve()
     config_path = script_dir / CONFIG_FILENAME
+    
+    default_store = {
+        "active_profile": "Default",
+        "profiles": {
+            "Default": DEFAULT_CONFIG.copy()
+        }
+    }
+
     if config_path.is_file():
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
-                cfg = json.load(f)
-            merged = DEFAULT_CONFIG.copy()
-            merged.update(cfg)
-            if isinstance(merged.get("EXCLUDE_PATTERNS"), str):
-                merged["EXCLUDE_PATTERNS"] = [l for l in merged["EXCLUDE_PATTERNS"].splitlines() if l.strip()]
-            if merged.get("PATH_MAPPINGS") is None:
-                merged["PATH_MAPPINGS"] = []
-            return merged
+                data = json.load(f)
+
+            # Format Multi-Profile Modern
+            if "profiles" in data and isinstance(data["profiles"], dict) and data["profiles"]:
+                for p_name, p_cfg in data["profiles"].items():
+                    merged = DEFAULT_CONFIG.copy()
+                    merged.update(p_cfg)
+                    if isinstance(merged.get("EXCLUDE_PATTERNS"), str):
+                        merged["EXCLUDE_PATTERNS"] = [l for l in merged["EXCLUDE_PATTERNS"].splitlines() if l.strip()]
+                    if merged.get("PATH_MAPPINGS") is None:
+                        merged["PATH_MAPPINGS"] = []
+                    data["profiles"][p_name] = merged
+
+                if data.get("active_profile") not in data["profiles"]:
+                    data["active_profile"] = list(data["profiles"].keys())[0]
+                return data
+            else:
+                # Migrasi otomatis dari file konfigurasi single lama
+                merged = DEFAULT_CONFIG.copy()
+                merged.update(data)
+                if isinstance(merged.get("EXCLUDE_PATTERNS"), str):
+                    merged["EXCLUDE_PATTERNS"] = [l for l in merged["EXCLUDE_PATTERNS"].splitlines() if l.strip()]
+                if merged.get("PATH_MAPPINGS") is None:
+                    merged["PATH_MAPPINGS"] = []
+                
+                migrated = {
+                    "active_profile": "Default",
+                    "profiles": {
+                        "Default": merged
+                    }
+                }
+                return migrated
         except Exception as e:
             log_queue.put(f"[CONFIG] Gagal memuat {config_path}: {e}")
-            return DEFAULT_CONFIG.copy()
-    else:
-        return DEFAULT_CONFIG.copy()
+            return default_store
+    return default_store
 
-def save_config(config_dict):
+def save_config_store(store_dict):
+    """Menyimpan seluruh profile store ke file deploy_config.json."""
     script_dir = Path(__file__).parent.resolve()
     config_path = script_dir / CONFIG_FILENAME
     try:
         with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(config_dict, f, indent=2, ensure_ascii=False)
-        log_queue.put(f"[CONFIG] Disimpan ke {config_path}")
+            json.dump(store_dict, f, indent=2, ensure_ascii=False)
+        log_queue.put(f"[CONFIG] Konfigurasi profil disimpan ke {config_path}")
         return True
     except Exception as e:
         log_queue.put(f"[CONFIG] Gagal menyimpan konfigurasi: {e}")
@@ -194,7 +230,6 @@ class FTPDeployer:
         local_abs = self.local_dir / local_rel_path
         final_remote_path = resolve_remote_path(local_rel_path, self.mappings)
         
-        # Dapatkan ukuran file untuk hitung persen
         filesize = os.path.getsize(local_abs)
         uploaded_bytes = 0
         last_percent = -1
@@ -202,9 +237,8 @@ class FTPDeployer:
         def progress_callback(data):
             nonlocal uploaded_bytes, last_percent
             uploaded_bytes += len(data)
-            percent = int((uploaded_bytes / filesize) * 100)
+            percent = int((uploaded_bytes / filesize) * 100) if filesize > 0 else 100
             
-            # Agar tidak spam log, kita hanya log setiap naik 10% atau saat selesai
             if percent % 10 == 0 and percent != last_percent:
                 self._log(f"   [ {percent}% ] {local_rel_path}")
                 last_percent = percent
@@ -213,7 +247,6 @@ class FTPDeployer:
         try:
             self.ensure_remote_dir(final_remote_path)
             with open(local_abs, 'rb') as f:
-                # Tambahkan callback di sini
                 self.ftp.storbinary(f'STOR {final_remote_path}', f, callback=progress_callback)
             return True
         except Exception as e:
@@ -243,52 +276,61 @@ class FTPDeployer:
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Smart Git-FTP Deployer V2.0 (Tree & Mapping Support)")
-        self.geometry("1200x850")
+        self.title("Smart Git-FTP Deployer V2.5 (Multi-Profile Support)")
+        self.geometry("1220x880")
         self.configure(bg=CLR_BG)
         
-        self.config_data = load_config()
+        # Load Multi-profile Data
+        self.config_store = load_config_store()
+        self.active_profile = self.config_store.get("active_profile", "Default")
+        self.config_data = self.config_store["profiles"].get(self.active_profile, DEFAULT_CONFIG.copy())
+        
         self.git = None
-        self.init_git()
         self.commits_data = []
         self.files_to_process = {'added_modified': [], 'deleted': []}
+        self.browser_ftp = None
+        self.ftp_lock = threading.Lock() 
 
         self.apply_styles()
         self.setup_ui()
+        self.init_git()
         self.process_log_queue()
-        self.ftp_lock = threading.Lock() 
 
     def apply_styles(self):
         self.style = ttk.Style(self)
         self.style.theme_use('clam')
         
-        # Notebook Styling
         self.style.configure("TNotebook", background=CLR_BG, borderwidth=0)
         self.style.configure("TNotebook.Tab", background=CLR_SURFACE, foreground=CLR_TEXT, padding=[20, 8], borderwidth=0)
         self.style.map("TNotebook.Tab", background=[("selected", CLR_ACCENT)], foreground=[("selected", CLR_BG)])
         
-        # General Styles
         self.style.configure("TFrame", background=CLR_BG)
         self.style.configure("TLabel", background=CLR_BG, foreground=CLR_TEXT, font=("Segoe UI", 10))
+        self.style.configure("TLabelframe", background=CLR_BG, foreground=CLR_ACCENT)
+        self.style.configure("TLabelframe.Label", background=CLR_BG, foreground=CLR_ACCENT, font=("Segoe UI Bold", 10))
         
-        # Treeview Styling (Modern Cyber)
         self.style.configure("Treeview", background=CLR_SURFACE, foreground=CLR_TEXT, fieldbackground=CLR_SURFACE, 
                              rowheight=32, borderwidth=0, font=("Segoe UI", 10))
         self.style.configure("Treeview.Heading", background=CLR_SURFACE, foreground=CLR_ACCENT, borderwidth=1, font=("Segoe UI Bold", 9))
         self.style.map("Treeview", background=[('selected', CLR_ACCENT)], foreground=[('selected', CLR_BG)])
 
-        # Button Styles
         self.style.configure("TButton", padding=6, font=("Segoe UI Bold", 9))
         self.style.configure("Accent.TButton", background=CLR_ACCENT, foreground=CLR_BG)
         self.style.configure("Deploy.TButton", background=CLR_SUCCESS, foreground=CLR_TEXT, font=("Segoe UI Bold", 10))
-        # Style Baru Untuk Tombol Canggih
         self.style.configure("Quick.TButton", background=CLR_QUICK, foreground=CLR_BG, font=("Segoe UI Black", 10))
+        self.style.configure("Danger.TButton", background=CLR_DANGER, foreground=CLR_TEXT, font=("Segoe UI Bold", 9))
 
     def init_git(self):
-        try: self.git = GitManager(self.config_data["LOCAL_DIR"])
+        try:
+            self.git = GitManager(self.config_data.get("LOCAL_DIR", "."))
+            log_queue.put(f"✔️ Git Repo aktif: {self.config_data.get('LOCAL_DIR')}")
+            if hasattr(self, 'commit_tree'):
+                self.load_commits()
         except Exception as e:
             self.git = None
             log_queue.put(f"[INIT] Git Error: {e}")
+            if hasattr(self, 'commit_tree'):
+                self.commit_tree.delete(*self.commit_tree.get_children())
 
     def setup_ui(self):
         self.notebook = ttk.Notebook(self)
@@ -307,25 +349,22 @@ class App(tk.Tk):
         self.setup_config_tab()
 
     def setup_deploy_tab(self):
-        # Master Vertical Split
         main_paned = ttk.PanedWindow(self.tab_deploy, orient=tk.VERTICAL)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # TOP: Commit & File Diff Area (Horizontal Split)
         top_split = ttk.PanedWindow(main_paned, orient=tk.HORIZONTAL)
         main_paned.add(top_split, weight=3)
 
-        # --- LEFT: Git Commits Panel (MODERNIZED) ---
+        # Commit Panel
         commit_frame = ttk.Frame(top_split)
         top_split.add(commit_frame, weight=1)
 
-        # Command Bar (Refresh & Deploy Dekat Sesuai Request)
         cmd_bar = ttk.Frame(commit_frame)
         cmd_bar.pack(fill=tk.X, pady=(0, 10))
         
-        ttk.Label(cmd_bar, text="GIT HISTORY", font=("Segoe UI Black", 12), foreground=CLR_ACCENT).pack(side=tk.LEFT)
+        self.lbl_active_app = ttk.Label(cmd_bar, text=f"GIT ({self.active_profile})", font=("Segoe UI Black", 12), foreground=CLR_ACCENT)
+        self.lbl_active_app.pack(side=tk.LEFT)
         
-        # === TOMBOL PALING CANGGIH ===
         self.btn_quick_deploy = ttk.Button(cmd_bar, text="⚡ QUICK DEPLOY (LATEST)", command=self.quick_auto_deploy, style="Quick.TButton")
         self.btn_quick_deploy.pack(side=tk.RIGHT, padx=5)
 
@@ -335,7 +374,6 @@ class App(tk.Tk):
         self.btn_refresh = ttk.Button(cmd_bar, text="🔄 REFRESH", command=self.load_commits)
         self.btn_refresh.pack(side=tk.RIGHT, padx=5)
 
-        # Commit Treeview
         self.commit_tree = ttk.Treeview(commit_frame, columns=("hash", "date", "subject"), show="headings", selectmode="extended")
         self.commit_tree.heading("hash", text="HASH")
         self.commit_tree.heading("date", text="DATE")
@@ -346,7 +384,7 @@ class App(tk.Tk):
         self.commit_tree.pack(fill=tk.BOTH, expand=True)
         self.commit_tree.bind("<<TreeviewSelect>>", self.on_commit_select)
 
-        # --- RIGHT: File Diff List ---
+        # File Diff Panel
         file_frame = ttk.LabelFrame(top_split, text=" STAGED FOR DEPLOY (MAPPED PATH) ")
         top_split.add(file_frame, weight=1)
         
@@ -357,47 +395,36 @@ class App(tk.Tk):
         self.file_tree.column("remote", width=400)
         self.file_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        # BOTTOM: Terminal Console
+        # Terminal Console Panel
         console_frame = ttk.LabelFrame(main_paned, text=" DEPLOYMENT CONSOLE ")
         main_paned.add(console_frame, weight=1)
         
-        # --- SUNTIKAN: LOG BAR UNTUK TOMBOL CLEAR ---
         log_bar = ttk.Frame(console_frame)
         log_bar.pack(fill=tk.X, padx=5, pady=(2, 0))
         ttk.Button(log_bar, text="🧹 CLEAR LOG", command=self.clear_logs).pack(side=tk.RIGHT)
-        # --------------------------------------------
 
         self.log_text = scrolledtext.ScrolledText(console_frame, state='disabled', font=("Consolas", 10), bg="#010409", fg="#3FB950", borderwidth=0)
         self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        if self.git: self.load_commits()
-
-    # === LOGIC TOMBOL CANGGIH ===
     def quick_auto_deploy(self):
-        """Logic: Refresh, Ambil Paling Baru, Langsung Deploy."""
         if not self.git:
             log_queue.put("❌ Error: Git Manager belum siap.")
             return
         
         log_queue.put("⚡ Menjalankan Quick Deploy (Otomatis)...")
-        
-        # 1. Refresh History
         self.load_commits()
         
         if not self.commits_data:
             log_queue.put("❌ Gagal: Tidak ada history commit.")
             return
 
-        # 2. Ambil commit paling atas (index 0 adalah yang paling baru)
         latest_commit = self.commits_data[0]
         latest_hash = latest_commit['hash']
         log_queue.put(f"✅ Mendeteksi Commit Terbaru: {latest_hash[:8]} - {latest_commit['subject']}")
 
-        # 3. Hitung Perubahan (Manual Trigger on_commit_select logic)
         self.commit_tree.selection_set(latest_hash)
-        self.files_to_process = self.git.get_changed_files(latest_hash, latest_hash, self.config_data["EXCLUDE_PATTERNS"])
+        self.files_to_process = self.git.get_changed_files(latest_hash, latest_hash, self.config_data.get("EXCLUDE_PATTERNS", []))
         
-        # Update UI Staged Files
         self.file_tree.delete(*self.file_tree.get_children())
         maps = self.config_data.get("PATH_MAPPINGS", [])
         for f in self.files_to_process['added_modified']:
@@ -405,16 +432,13 @@ class App(tk.Tk):
         for f in self.files_to_process['deleted']:
             self.file_tree.insert("", "end", values=("DELETE", resolve_remote_path(f, maps)))
 
-        # 4. Langsung Deploy
         if self.files_to_process['added_modified'] or self.files_to_process['deleted']:
             log_queue.put("🚀 Melakukan push otomatis ke server...")
             threading.Thread(target=self.worker_deploy, daemon=True).start()
         else:
             log_queue.put("ℹ️ Tidak ada file baru yang perlu di-deploy.")
 
-    # === SUNTIKAN: FUNGSI CLEAR LOG ===
     def clear_logs(self):
-        """Membersihkan semua teks di terminal console."""
         self.log_text.config(state='normal')
         self.log_text.delete('1.0', tk.END)
         self.log_text.config(state='disabled')
@@ -423,14 +447,12 @@ class App(tk.Tk):
         paned = ttk.PanedWindow(self.tab_browser, orient=tk.HORIZONTAL)
         paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # --- LOCAL PROJECT ---
         lf = ttk.LabelFrame(paned, text=" LOCAL PROJECT ")
         paned.add(lf, weight=1)
         self.local_tree = ttk.Treeview(lf, show="tree")
         self.local_tree.pack(fill=tk.BOTH, expand=True)
         self.local_tree.bind("<<TreeviewOpen>>", self.on_local_expand)
 
-        # --- FTP SERVER ---
         rf = ttk.LabelFrame(paned, text=" FTP SERVER ")
         paned.add(rf, weight=1)
         btn_rf = ttk.Button(rf, text="🛰️ CONNECT & EXPLORE", command=self.refresh_remote_tree)
@@ -440,7 +462,6 @@ class App(tk.Tk):
         self.remote_tree.bind("<<TreeviewOpen>>", self.on_remote_expand)
         
         self.after(100, self.refresh_local_root)
-        self.browser_ftp = None
 
     def refresh_local_root(self):
         self.local_tree.delete(*self.local_tree.get_children())
@@ -469,35 +490,7 @@ class App(tk.Tk):
                 self.local_tree.delete(*children)
                 self._populate_local_node(node, path)
 
-    def refresh_remote_tree(self):
-        threading.Thread(target=self._worker_list_ftp_root, daemon=True).start()
-
-    def _worker_list_ftp_root(self):
-        try:
-            cfg = self.config_data
-            if self.browser_ftp:
-                try: self.browser_ftp.quit()
-                except: pass
-            
-            log_queue.put(f"DEBUG: Menghubungkan ke {cfg['FTP_HOST']}...")
-            self.browser_ftp = ftplib.FTP(cfg["FTP_HOST"], cfg["FTP_USER"], cfg["FTP_PASS"], timeout=15)
-            self.browser_ftp.set_pasv(True)
-            
-            root_path = cfg["REMOTE_DIR"] if cfg["REMOTE_DIR"] else "/"
-            log_queue.put(f"DEBUG: Berhasil Login. Lokasi root: {root_path}")
-            
-            def update_ui():
-                self.remote_tree.delete(*self.remote_tree.get_children())
-                root_id = self.remote_tree.insert("", "end", text=f" 🌍 {root_path}", values=(root_path, "dir"), open=True)
-                self.remote_tree.insert(root_id, "end", text="loading...")
-                # Langsung fetch isi root
-                self._fetch_remote_content(root_id, root_path)
-            self.after(0, update_ui)
-        except Exception as e:
-            log_queue.put(f"❌ FTP BROWSER ERROR: {str(e)}")
-
     def _ensure_browser_ftp(self):
-        """Memastikan koneksi FTP browser tetap aktif."""
         with self.ftp_lock:
             try:
                 if self.browser_ftp:
@@ -516,105 +509,34 @@ class App(tk.Tk):
                 return False
 
     def refresh_remote_tree(self):
-        """Memulai ulang tree dari root remote."""
         self.remote_tree.delete(*self.remote_tree.get_children())
         root_path = self.config_data.get("REMOTE_DIR", "/")
         if not root_path: root_path = "/"
         
-        # Buat root node
-        root_id = self.remote_tree.insert("", "end", text=f" 🌍 {root_path}", 
-                                         values=(root_path, "dir"), open=True)
+        root_id = self.remote_tree.insert("", "end", text=f" 🌍 {root_path}", values=(root_path, "dir"), open=True)
         self.remote_tree.insert(root_id, "end", text="loading...")
-        
-        # Jalankan worker
-        threading.Thread(target=self._fetch_remote_content, args=(root_id, root_path), daemon=True).start()
+        self._fetch_remote_content(root_id, root_path)
 
     def _fetch_remote_content(self, parent_node, path):
-        """Worker thread untuk mengambil isi folder FTP."""
-        if not self._ensure_browser_ftp():
-            self.after(0, lambda: self.remote_tree.delete(*self.remote_tree.get_children(parent_node)))
-            return
-
-        with self.ftp_lock:
-            try:
-                items = []
-                # Pastikan path diawali dengan /
-                target_path = path if path.startswith('/') else '/' + path
-                
-                log_queue.put(f"🔍 Fetching: {target_path}")
-                
-                try:
-                    # Gunakan MLSD (lebih modern & akurat)
-                    for name, facts in self.browser_ftp.mlsd(target_path):
-                        if name in [".", ".."]: continue
-                        items.append((name, facts.get("type") == "dir"))
-                except:
-                    # Fallback ke NLST/LIST jika MLSD tidak didukung
-                    self.browser_ftp.cwd(target_path)
-                    lines = []
-                    self.browser_ftp.retrlines('LIST', lines.append)
-                    for line in lines:
-                        parts = line.split()
-                        if not parts: continue
-                        name = parts[-1]
-                        if name in [".", ".."]: continue
-                        # Deteksi folder berdasarkan flag 'd' di awal string LIST
-                        is_dir = line.lower().startswith('d') or '<dir>' in line.lower()
-                        items.append((name, is_dir))
-
-                # Sort: Folder dulu, baru file
-                items.sort(key=lambda x: (not x[1], x[0].lower()))
-
-                def update_ui():
-                    # Hapus loading dummy
-                    self.remote_tree.delete(*self.remote_tree.get_children(parent_node))
-                    if not items:
-                        self.remote_tree.insert(parent_node, "end", text=" (Kosong)", values=("", "file"))
-                        return
-                        
-                    for name, is_dir in items:
-                        icon = "📁" if is_dir else "📄"
-                        # Gabungkan path dengan benar
-                        full_p = os.path.join(path, name).replace('\\', '/')
-                        node = self.remote_tree.insert(parent_node, "end", text=f" {icon} {name}", 
-                                                      values=(full_p, "dir" if is_dir else "file"))
-                        if is_dir:
-                            self.remote_tree.insert(node, "end", text="loading...")
-                
-                self.after(0, update_ui)
-
-            except Exception as e:
-                log_queue.put(f"❌ Error listing {path}: {e}")
-                self.after(0, lambda: self.remote_tree.delete(*self.remote_tree.get_children(parent_node)))
-
-    def _fetch_remote_content(self, parent_node, path):
-        """Worker thread yang jauh lebih stabil untuk mengambil isi folder FTP."""
         def worker():
             try:
-                # 1. Pastikan koneksi siap
                 if not self._ensure_browser_ftp():
+                    self.after(0, lambda: self.remote_tree.delete(*self.remote_tree.get_children(parent_node)))
                     return
 
                 with self.ftp_lock:
-                    # Normalisasi path: hapus double slash dan pastikan diawali /
                     target_path = "/" + path.strip("/")
                     target_path = target_path.replace("//", "/")
-                    
-                    log_queue.put(f"📂 Membuka folder: {target_path}")
+                    log_queue.put(f"📂 Membuka remote folder: {target_path}")
                     
                     items = []
-                    
-                    # 2. Coba cara modern (MLSD)
                     try:
-                        # Kita pindah folder dulu untuk memastikan server 'sadar' posisi
                         self.browser_ftp.cwd(target_path)
                         for name, facts in self.browser_ftp.mlsd():
                             if name in [".", ".."]: continue
                             is_dir = facts.get("type") in ["dir", "pdir", "cdir"]
                             items.append((name, is_dir))
-                    except Exception as e:
-                        log_queue.put(f"⚠️ MLSD Gagal, mencoba LIST standar...")
-                        # 3. Fallback ke LIST standar jika MLSD dilarang/gagal
+                    except Exception:
                         try:
                             lines = []
                             self.browser_ftp.retrlines('LIST', lines.append)
@@ -622,74 +544,74 @@ class App(tk.Tk):
                                 if not line: continue
                                 parts = line.split()
                                 if len(parts) < 9: continue
-                                name = " ".join(parts[8:]) # Ambil nama file (bisa mengandung spasi)
+                                name = " ".join(parts[8:])
                                 if name in [".", ".."]: continue
                                 is_dir = line.startswith('d') or '<DIR>' in line.upper()
                                 items.append((name, is_dir))
                         except Exception as e2:
-                            log_queue.put(f"❌ Semua metode gagal: {e2}")
+                            log_queue.put(f"❌ Error LIST FTP: {e2}")
 
-                    # Urutkan: Folder dulu, baru file
                     items.sort(key=lambda x: (not x[1], x[0].lower()))
 
                     def fill_ui():
-                        # Hapus "loading..."
                         self.remote_tree.delete(*self.remote_tree.get_children(parent_node))
-                        
                         if not items:
-                            # Jika benar-benar kosong, beri tanda agar user tidak bingung
                             self.remote_tree.insert(parent_node, "end", text=" (Kosong/Tanpa Izin)", values=("", "file"))
                             return
 
                         for name, is_dir in items:
                             icon = "📁" if is_dir else "📄"
-                            # Gabung path dengan rapi
                             new_path = (target_path.rstrip("/") + "/" + name).replace("//", "/")
-                            
-                            node = self.remote_tree.insert(parent_node, "end", 
-                                                          text=f" {icon} {name}", 
+                            node = self.remote_tree.insert(parent_node, "end", text=f" {icon} {name}", 
                                                           values=(new_path, "dir" if is_dir else "file"))
                             if is_dir:
-                                # Tambahkan dummy loading lagi untuk anak folder
                                 self.remote_tree.insert(node, "end", text="loading...")
                         
-                        # Buka folder tersebut agar terlihat isinya
                         self.remote_tree.item(parent_node, open=True)
-                        log_queue.put(f"✅ Berhasil memuat {len(items)} item di {target_path}")
 
                     self.after(0, fill_ui)
-
             except Exception as e:
-                log_queue.put(f"❌ Error fatal saat fetch: {str(e)}")
+                log_queue.put(f"❌ Error listing remote: {e}")
                 self.after(0, lambda: self.remote_tree.delete(*self.remote_tree.get_children(parent_node)))
 
         threading.Thread(target=worker, daemon=True).start()
 
     def on_remote_expand(self, event):
-        """Trigger saat user klik tanda [+] di sebelah folder."""
         node = self.remote_tree.focus()
         if not node: return
-        
         vals = self.remote_tree.item(node, "values")
         if not vals or len(vals) < 2: return
         
         path, n_type = vals
         if n_type == "dir":
             children = self.remote_tree.get_children(node)
-            # Cek apakah anak pertamanya tulisan "loading..."
             if children:
                 first_child_text = self.remote_tree.item(children[0], "text").strip()
                 if first_child_text == "loading...":
-                    # Panggil fungsi fetch untuk mengganti "loading..." dengan isi asli
                     self._fetch_remote_content(node, path)
 
-
-
+    # ================= CONFIGURATION & MULTI-PROFILE UI =================
 
     def setup_config_tab(self):
-        container = ttk.Frame(self.tab_config, padding=30)
+        container = ttk.Frame(self.tab_config, padding=25)
         container.pack(fill=tk.BOTH, expand=True)
 
+        # --- PROFILE SELECTION HEADER ---
+        profile_frame = ttk.LabelFrame(container, text=" 🎛️ CONFIGURATION PRESETS / PROFILES ", padding=12)
+        profile_frame.pack(fill=tk.X, pady=(0, 15))
+
+        ttk.Label(profile_frame, text="Active Profile:", font=("Segoe UI Bold", 10)).pack(side=tk.LEFT, padx=(5, 10))
+        
+        self.profile_var = tk.StringVar(value=self.active_profile)
+        self.profile_combo = ttk.Combobox(profile_frame, textvariable=self.profile_var, state="readonly", font=("Segoe UI Bold", 10), width=30)
+        self.profile_combo['values'] = list(self.config_store["profiles"].keys())
+        self.profile_combo.pack(side=tk.LEFT, padx=5)
+        self.profile_combo.bind("<<ComboboxSelected>>", self.on_profile_change)
+
+        ttk.Button(profile_frame, text="➕ NEW PROFILE", command=self.add_profile, style="Accent.TButton").pack(side=tk.LEFT, padx=5)
+        ttk.Button(profile_frame, text="🗑️ DELETE PROFILE", command=self.delete_profile).pack(side=tk.LEFT, padx=5)
+
+        # --- CONFIG FIELDS ---
         grid = ttk.Frame(container)
         grid.pack(fill=tk.X)
         
@@ -700,19 +622,19 @@ class App(tk.Tk):
 
         self.cfg_ents = {}
         for i, (lbl, key) in enumerate(flds):
-            ttk.Label(grid, text=lbl, font=("Segoe UI Bold", 9), foreground=CLR_TEXT_DIM).grid(row=i, column=0, sticky="w", pady=8)
-            e = ttk.Entry(grid, font=("Segoe UI", 11))
+            ttk.Label(grid, text=lbl, font=("Segoe UI Bold", 9), foreground=CLR_TEXT_DIM).grid(row=i, column=0, sticky="w", pady=6)
+            e = ttk.Entry(grid, font=("Segoe UI", 10))
             if "PASS" in lbl: e.config(show="*")
             e.insert(0, self.config_data.get(key, ""))
             e.grid(row=i, column=1, sticky="ew", padx=15)
             self.cfg_ents[key] = e
         grid.columnconfigure(1, weight=1)
 
-        # MAPPING
-        m_frame = ttk.LabelFrame(container, text=" PATH MAPPING LOGIC ", padding=15)
-        m_frame.pack(fill=tk.BOTH, expand=True, pady=20)
+        # --- MAPPING ---
+        m_frame = ttk.LabelFrame(container, text=" PATH MAPPING LOGIC ", padding=12)
+        m_frame.pack(fill=tk.BOTH, expand=True, pady=15)
         
-        self.map_tree = ttk.Treeview(m_frame, columns=("l", "r"), show="headings", height=5)
+        self.map_tree = ttk.Treeview(m_frame, columns=("l", "r"), show="headings", height=4)
         self.map_tree.heading("l", text="LOCAL PREFIX")
         self.map_tree.heading("r", text="REMOTE TARGET")
         self.map_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -725,30 +647,122 @@ class App(tk.Tk):
         for m in self.config_data.get("PATH_MAPPINGS", []):
             self.map_tree.insert("", "end", values=(m['local'], m['remote']))
 
-        ttk.Button(container, text="💾 SAVE ALL CONFIGURATIONS", command=self.save_config_ui, style="Accent.TButton").pack(fill=tk.X, ipady=10)
+        ttk.Button(container, text="💾 SAVE CURRENT CONFIGURATION", command=self.save_config_ui, style="Accent.TButton").pack(fill=tk.X, ipady=8)
+
+    def populate_form_from_config(self, cfg):
+        """Mengisi nilai widget konfigurasi sesuai profile yang dipilih."""
+        for key, entry in self.cfg_ents.items():
+            entry.delete(0, tk.END)
+            entry.insert(0, cfg.get(key, ""))
+            
+        self.map_tree.delete(*self.map_tree.get_children())
+        for m in cfg.get("PATH_MAPPINGS", []):
+            self.map_tree.insert("", "end", values=(m.get('local', ''), m.get('remote', '')))
+
+    def on_profile_change(self, event=None):
+        selected_name = self.profile_var.get()
+        if selected_name not in self.config_store["profiles"]:
+            return
+
+        self.active_profile = selected_name
+        self.config_store["active_profile"] = selected_name
+        self.config_data = self.config_store["profiles"][selected_name]
+
+        # Isi form UI dengan data profil baru
+        self.populate_form_from_config(self.config_data)
+
+        # Update label UI
+        self.lbl_active_app.config(text=f"GIT ({self.active_profile})")
+
+        # Re-inisialisasi Git & Local Tree sesuai LOCAL_DIR profil yang baru
+        self.init_git()
+        self.refresh_local_root()
+
+        # Tutup koneksi browser FTP sebelumnya agar reconnect ke server baru
+        if self.browser_ftp:
+            try: self.browser_ftp.quit()
+            except: pass
+            self.browser_ftp = None
+
+        save_config_store(self.config_store)
+        log_queue.put(f"🔀 Berpindah ke profile: '{self.active_profile}'")
+
+    def add_profile(self):
+        new_name = simpledialog.askstring("New Profile", "Masukkan Nama Profil Aplikasi Baru:\n(Contoh: primaginary hr)", parent=self)
+        if not new_name: return
+        new_name = new_name.strip()
+        
+        if new_name in self.config_store["profiles"]:
+            messagebox.showerror("Error", f"Profil dengan nama '{new_name}' sudah ada!")
+            return
+
+        # Clone konfigurasi yang sedang aktif sebagai basis profil baru
+        current_active = self.config_store["profiles"].get(self.active_profile, DEFAULT_CONFIG).copy()
+        self.config_store["profiles"][new_name] = current_active
+        self.config_store["active_profile"] = new_name
+
+        # Update combo box list & switch ke profil baru
+        profiles_list = list(self.config_store["profiles"].keys())
+        self.profile_combo['values'] = profiles_list
+        self.profile_var.set(new_name)
+        
+        self.on_profile_change()
+        messagebox.showinfo("Success", f"Profil '{new_name}' berhasil dibuat dan diaktifkan!")
+
+    def delete_profile(self):
+        profiles = self.config_store["profiles"]
+        if len(profiles) <= 1:
+            messagebox.showwarning("Warning", "Minimal harus ada 1 profil tersisa.")
+            return
+
+        if messagebox.askyesno("Confirm Delete", f"Hapus profil '{self.active_profile}'?"):
+            deleted_name = self.active_profile
+            del profiles[deleted_name]
+            
+            # Switch ke profil pertama yang tersisa
+            new_active = list(profiles.keys())[0]
+            self.active_profile = new_active
+            self.config_store["active_profile"] = new_active
+            
+            self.profile_combo['values'] = list(profiles.keys())
+            self.profile_var.set(new_active)
+            self.on_profile_change()
+            messagebox.showinfo("Deleted", f"Profil '{deleted_name}' berhasil dihapus.")
 
     def add_mapping(self):
-        w = tk.Toplevel(self, bg=CLR_BG); w.title("Add Mapping")
+        w = tk.Toplevel(self, bg=CLR_BG)
+        w.title("Add Mapping")
         ttk.Label(w, text="Local Prefix:").pack(pady=5)
         e1 = ttk.Entry(w); e1.pack(padx=20)
         ttk.Label(w, text="Remote Target:").pack(pady=5)
         e2 = ttk.Entry(w); e2.pack(padx=20)
-        def _sv(): self.map_tree.insert("", "end", values=(e1.get(), e2.get())); w.destroy()
+        def _sv():
+            self.map_tree.insert("", "end", values=(e1.get(), e2.get()))
+            w.destroy()
         ttk.Button(w, text="OK", command=_sv).pack(pady=15)
 
     def del_mapping(self):
-        for s in self.map_tree.selection(): self.map_tree.delete(s)
+        for s in self.map_tree.selection(): 
+            self.map_tree.delete(s)
 
     def save_config_ui(self):
         maps = []
         for i in self.map_tree.get_children():
             v = self.map_tree.item(i)["values"]
             maps.append({"local": str(v[0]), "remote": str(v[1])})
-        for k, e in self.cfg_ents.items(): self.config_data[k] = e.get()
-        self.config_data["PATH_MAPPINGS"] = maps
-        if save_config(self.config_data):
-            messagebox.showinfo("Success", "Configuration Secured.")
-            self.init_git(); self.load_commits()
+        
+        updated_cfg = self.config_store["profiles"].get(self.active_profile, DEFAULT_CONFIG.copy())
+        for k, e in self.cfg_ents.items():
+            updated_cfg[k] = e.get()
+        updated_cfg["PATH_MAPPINGS"] = maps
+
+        self.config_store["profiles"][self.active_profile] = updated_cfg
+        self.config_data = updated_cfg
+
+        if save_config_store(self.config_store):
+            messagebox.showinfo("Success", f"Konfigurasi '{self.active_profile}' berhasil disimpan.")
+            self.init_git()
+            self.load_commits()
 
     def load_commits(self):
         if not self.git: return
@@ -761,26 +775,18 @@ class App(tk.Tk):
         sel = self.commit_tree.selection()
         if not sel: return
 
-        # --- FITUR BARU: COPY TO CLIPBOARD ---
-        # Mengambil baris yang sedang difokuskan/diklik oleh user
         focused = self.commit_tree.focus()
         if focused:
             vals = self.commit_tree.item(focused, "values")
             if vals:
-                # Menggabungkan Hash, Date, dan Message menjadi satu string
                 copy_text = f"{vals[0]} | {vals[1]} | {vals[2]}"
-                
-                # Memasukkan ke dalam clipboard sistem
                 self.clipboard_clear()
                 self.clipboard_append(copy_text)
-                self.update() # Perintah penting agar clipboard tetap tersimpan di OS
-                
-                # Memberikan feedback visual ke Terminal Log
+                self.update()
                 log_queue.put(f"📋 Info dicopy ke clipboard: {vals[0]}")
-        # --------------------------------------
-        # Range: oldest selected to newest selected
+
         start, end = sel[-1], sel[0]
-        self.files_to_process = self.git.get_changed_files(start, end, self.config_data["EXCLUDE_PATTERNS"])
+        self.files_to_process = self.git.get_changed_files(start, end, self.config_data.get("EXCLUDE_PATTERNS", []))
         
         self.file_tree.delete(*self.file_tree.get_children())
         maps = self.config_data.get("PATH_MAPPINGS", [])
@@ -792,7 +798,7 @@ class App(tk.Tk):
         self.btn_deploy.config(state=tk.NORMAL if (self.files_to_process['added_modified'] or self.files_to_process['deleted']) else tk.DISABLED)
 
     def start_deploy(self):
-        if messagebox.askyesno("Confirm", "Deploy selected commits to server?"):
+        if messagebox.askyesno("Confirm", f"Deploy selected commits to server ({self.active_profile})?"):
             self.btn_deploy.config(state=tk.DISABLED)
             threading.Thread(target=self.worker_deploy, daemon=True).start()
 

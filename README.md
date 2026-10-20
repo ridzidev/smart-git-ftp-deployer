@@ -6,7 +6,7 @@ Aplikasi desktop (Python/Tkinter) untuk deployment berbasis Git ke server hostin
 
 Cocok digunakan pada *shared hosting* (cPanel/DirectAdmin) yang tidak menyediakan akses SSH, sehingga pipeline deployment berbasis Git dapat tetap berjalan.
 
-**Versi 2.2**
+**Versi 2.3**
 
 ![Tampilan utama Deployment Engine](screenshoot1.png)
 
@@ -35,11 +35,13 @@ Cocok digunakan pada *shared hosting* (cPanel/DirectAdmin) yang tidak menyediaka
    cd smart-git-ftp-deployer
    ```
 
-2. Jalankan aplikasi dari direktori repositori Anda sendiri (folder yang berisi `.git`).
+2. Jalankan aplikasi dari folder repositori ini (biarkan seluruh berkas tetap bersama).
 
    ```bash
-   python smart_deploy.py
+   python app.py
    ```
+
+   Berkas `smart_deploy.py` masih tersedia sebagai pemanggil kompatibilitas, sama saja dengan `python smart_deploy.py`.
 
 3. Buka tab **Konfigurasi**, isi Host, User, dan Password FTP, direktori lokal, dan direktori remote. Aktifkan opsi **FTP over TLS (FTPS)** jika server mendukungnya, lalu simpan.
 
@@ -81,6 +83,24 @@ Contoh `PATH_MAPPINGS`:
 - Gunakan opsi FTPS bila server mendukungnya. FTP polos mengirim kredensial tanpa enkripsi, sehingga dapat dibaca pihak yang memantau jaringan.
 - Deployment hanya memproses berkas yang tercatat pada riwayat Git, sehingga berkas lokal seperti `.env` atau `.git` tidak pernah terunggah selama pola pengecualian belum diubah.
 
+## Struktur Berkas
+
+Kode sistem dibagikan per fitur dalam paket `smart_deploy_app/`:
+
+| Berkas | Isi |
+|---|---|
+| `app.py` | Titik masuk aplikasi |
+| `smart_deploy.py` | Pemanggil kompatibilitas (menyalurkan pada `app.py`) |
+| `smart_deploy_app/config.py` | Konfigurasi bawaan, penyimpanan profil, utilitas jalur |
+| `smart_deploy_app/theme.py` | Palet warna antarmuka |
+| `smart_deploy_app/git_manager.py` | Pembaca riwayat dan diff Git |
+| `smart_deploy_app/ftp_deployer.py` | Transport FTP/FTPS |
+| `smart_deploy_app/ui_deploy.py` | Tab Deployment Engine |
+| `smart_deploy_app/ui_exporter.py` | Tab Ekspor SQL |
+| `smart_deploy_app/ui_browser.py` | Tab Peramban Berkas |
+| `smart_deploy_app/ui_config.py` | Tab Konfigurasi |
+| `smart_deploy_app/ui_app.py` | Jendela utama (perakitan seluruh tab) |
+
 ## Struktur Antarmuka
 
 | Tab | Fungsi |
@@ -95,6 +115,12 @@ Contoh `PATH_MAPPINGS`:
 Kontribusi berupa laporan galat, usulan fitur, atau *pull request* diterima dengan terbuka. Untuk perubahan besar, buka *issue* terlebih dahulu agar dapat didiskusikan sebelum diterapkan.
 
 ## Changelog
+
+### v2.3 — 2026-10-21
+
+- Struktur kode dipecah per fitur ke dalam paket `smart_deploy_app` (konfigurasi, tema, Git, FTP, serta satu modul per tab antarmuka).
+- `app.py` menjadi titik masuk aplikasi; `smart_deploy.py` dijadikan pemanggil kompatibilitas.
+- Perilaku aplikasi tidak berubah; berkas konfigurasi dan profil lama tetap didukung tanpa penyesuaian.
 
 ### v2.2 — 2026-10-21
 

@@ -103,6 +103,7 @@ def save_config_store(store_dict):
     try:
         with open(config_path, "w", encoding="utf-8") as f:
             json.dump(store_dict, f, indent=2, ensure_ascii=False)
+        os.chmod(config_path, 0o600)  # Lindungi kredensial dari akses user lain
         log_queue.put(f"[CONFIG] Konfigurasi disimpan ke {config_path}")
         return True
     except Exception as e:

@@ -16,11 +16,13 @@ import json
 # ================= KONFIGURASI & WARNA =================
 
 CONFIG_FILENAME = "deploy_config.json"
+APP_VERSION = "2.2"
 
 DEFAULT_CONFIG = {
     "FTP_HOST": "",
     "FTP_USER": "",
     "FTP_PASS": "",
+    "FTP_TLS": False,
     "LOCAL_DIR": ".",
     "REMOTE_DIR": "/",
     "EXCLUDE_PATTERNS": [
@@ -68,6 +70,8 @@ def load_config_store():
                 for p_name, p_cfg in data["profiles"].items():
                     merged = DEFAULT_CONFIG.copy()
                     merged.update(p_cfg)
+                    if not merged.get("EXCLUDE_PATTERNS"):
+                        merged["EXCLUDE_PATTERNS"] = list(DEFAULT_CONFIG["EXCLUDE_PATTERNS"])
                     if isinstance(merged.get("EXCLUDE_PATTERNS"), str):
                         merged["EXCLUDE_PATTERNS"] = [
                             l.strip() for l in merged["EXCLUDE_PATTERNS"].splitlines() if l.strip()
@@ -82,6 +86,8 @@ def load_config_store():
             else:
                 merged = DEFAULT_CONFIG.copy()
                 merged.update(data)
+                if not merged.get("EXCLUDE_PATTERNS"):
+                    merged["EXCLUDE_PATTERNS"] = list(DEFAULT_CONFIG["EXCLUDE_PATTERNS"])
                 if isinstance(merged.get("EXCLUDE_PATTERNS"), str):
                     merged["EXCLUDE_PATTERNS"] = [
                         l.strip() for l in merged["EXCLUDE_PATTERNS"].splitlines() if l.strip()
@@ -220,6 +226,7 @@ class FTPDeployer:
         self.host = config["FTP_HOST"]
         self.user = config["FTP_USER"]
         self.password = config["FTP_PASS"]
+        self.tls = bool(config.get("FTP_TLS", False))
         self.local_dir = Path(config["LOCAL_DIR"]).resolve()
         self.remote_dir_base = config["REMOTE_DIR"]
         self.mappings = config.get("PATH_MAPPINGS", [])
@@ -231,11 +238,17 @@ class FTPDeployer:
 
     def connect(self):
         try:
-            self._log(f"[INFO] Menghubungkan ke host FTP: {self.host}...")
-            self.ftp = ftplib.FTP(self.host, timeout=30)
-            self.ftp.login(self.user, self.password)
+            proto = "FTPS (TLS)" if self.tls else "FTP"
+            self._log(f"[INFO] Menghubungkan ke {self.host} ({proto})...")
+            if self.tls:
+                self.ftp = ftplib.FTP_TLS(self.host, timeout=30)
+                self.ftp.login(self.user, self.password)
+                self.ftp.prot_p()
+            else:
+                self.ftp = ftplib.FTP(self.host, timeout=30)
+                self.ftp.login(self.user, self.password)
             self.ftp.set_pasv(True)
-            self._log("[OK] Terhubung ke server FTP (Passive Mode).")
+            self._log("[OK] Terhubung (Passive Mode).")
             try:
                 self.ftp.cwd(self.remote_dir_base)
             except Exception:
@@ -322,7 +335,7 @@ class FTPDeployer:
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Git-FTP Deployment & Synchronizer")
+        self.title(f"Smart Git-FTP Deployer v{APP_VERSION}")
         self.geometry("1340x920")
         self.minsize(1080, 720)
         self.configure(bg=CLR_BG)
@@ -330,6 +343,8 @@ class App(tk.Tk):
         self.config_store = load_config_store()
         self.active_profile = self.config_store.get("active_profile", "Default")
         self.config_data = self.config_store["profiles"].get(self.active_profile, DEFAULT_CONFIG.copy())
+
+        log_queue.put(f"[INIT] Smart Git-FTP Deployer v{APP_VERSION}")
 
         self.git = None
         self.all_commits = []
@@ -1193,7 +1208,11 @@ class App(tk.Tk):
 
             try:
                 cfg = self.config_data
-                self.browser_ftp = ftplib.FTP(cfg["FTP_HOST"], cfg["FTP_USER"], cfg["FTP_PASS"], timeout=15)
+                if cfg.get("FTP_TLS"):
+                    self.browser_ftp = ftplib.FTP_TLS(cfg["FTP_HOST"], cfg["FTP_USER"], cfg["FTP_PASS"], timeout=15)
+                    self.browser_ftp.prot_p()
+                else:
+                    self.browser_ftp = ftplib.FTP(cfg["FTP_HOST"], cfg["FTP_USER"], cfg["FTP_PASS"], timeout=15)
                 self.browser_ftp.set_pasv(True)
                 return True
             except Exception as e:
@@ -1341,6 +1360,14 @@ class App(tk.Tk):
             self.cfg_ents[key] = entry
         form_frame.columnconfigure(1, weight=1)
 
+        self.var_ftp_tls = tk.BooleanVar(value=bool(self.config_data.get("FTP_TLS")))
+        ttk.Checkbutton(
+            form_frame,
+            text="FTP over TLS (FTPS)",
+            variable=self.var_ftp_tls,
+            style="TCheckbutton"
+        ).grid(row=len(fields), column=1, sticky="w", pady=4)
+
         map_frame = ttk.LabelFrame(container, text=" Pemetaan Jalur (Path Mapping) ", padding=10)
         map_frame.pack(fill=tk.BOTH, expand=True, pady=12)
 
@@ -1363,6 +1390,8 @@ class App(tk.Tk):
         for key, entry in self.cfg_ents.items():
             entry.delete(0, tk.END)
             entry.insert(0, cfg.get(key, ""))
+        if hasattr(self, "var_ftp_tls"):
+            self.var_ftp_tls.set(bool(cfg.get("FTP_TLS", False)))
 
         self.map_tree.delete(*self.map_tree.get_children())
         for m in cfg.get("PATH_MAPPINGS", []):
@@ -1471,6 +1500,8 @@ class App(tk.Tk):
         for key, entry in self.cfg_ents.items():
             updated[key] = entry.get().strip()
         updated["PATH_MAPPINGS"] = mappings
+        if hasattr(self, "var_ftp_tls"):
+            updated["FTP_TLS"] = bool(self.var_ftp_tls.get())
 
         self.config_store["profiles"][self.active_profile] = updated
         self.config_data = updated

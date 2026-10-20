@@ -2,103 +2,135 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A smart, structure-aware, Git-based FTP deployer with a GUI. It automatically detects changed files from your commits to upload or delete, making deployments to shared hosting a breeze.
+Aplikasi desktop (Python/Tkinter) untuk deployment berbasis Git ke server hosting yang hanya menyediakan akses FTP. Aplikasi membaca riwayat *commit* repositori lokal, menghitung daftar berkas yang berubah antar *commit*, lalu mengunggah atau menghapus berkas tersebut di server melalui FTP/FTPS.
 
-**v2.1 (Quick Deploy & Browser Edition)**
+Cocok digunakan pada *shared hosting* (cPanel/DirectAdmin) yang tidak menyediakan akses SSH, sehingga pipeline deployment berbasis Git dapat tetap berjalan.
 
-![alt text](https://raw.githubusercontent.com/ridzidev/smart-git-ftp-deployer/refs/heads/main/screenshoot1.png)
+**Versi 2.2**
 
-v.1
+![Tampilan utama Deployment Engine](screenshoot1.png)
 
-![alt text](https://raw.githubusercontent.com/ridzidev/smart-git-ftp-deployer/refs/heads/main/screenshoot.png)
----
+## Fitur
 
-## 😩 Masalah: Deployment Manual via FTP yang Melelahkan
+- **Deployment berbasis commit** — pilih satu commit atau rentang commit; aplikasi menghitung berkas yang ditambahkan, diubah, dan dihapus dari *diff* Git.
+- **Dua mode eksekusi** — bertahap (setiap commit diproses berurutan) atau akumulatif (satu batch untuk rentang commit). Opsi berhenti otomatis saat terjadi galat (*fail-fast*) dan pembatalan di tengah proses.
+- **FTP dan FTPS** — opsi FTP over TLS untuk enkripsi kanal kontrol dan data.
+- **Multi profil** — sejumlah konfigurasi server dapat disimpan dalam satu berkas dan diganti secara langsung.
+- **Peramban berkas** — menjelajahi struktur direktori lokal dan server pada antarmuka yang sama.
+- **Pemetaan jalur (path mapping)** — memetakan folder lokal ke folder remote yang berbeda, contohnya `dist/` ke `public_html/app/`.
+- **Ekspor riwayat commit** — menyusun daftar commit menjadi pernyataan SQL yang dapat disimpan sebagai berkas atau disalin ke *clipboard*.
+- **Konsol eksekusi** — log berwarna dengan progres per berkas dan stempel waktu.
 
-Deploy ke *shared hosting* seringkali berarti kita harus kembali ke metode upload FTP manual, yang lambat, membosankan, dan sangat rentan terhadap kesalahan. Pernahkah Anda:
+## Persyaratan
 
--   Lupa file mana saja yang baru Anda ubah?
--   Lupa menghapus file lama di server yang seharusnya sudah tidak ada?
--   Menghabiskan waktu berharga untuk meng-upload ulang **seluruh proyek** hanya untuk perubahan kecil pada satu file CSS?
--   Berharap ada cara seperti CI/CD di server yang hanya memberikan akses FTP?
+- Python 3.8 atau lebih baru (pastikan paket **Tkinter** tersedia; pada beberapa distribusi terpisah sebagai `python3-tk`).
+- Git yang dapat dijalankan dari baris perintah.
 
-Jika ya, alat ini dibuat untuk Anda.
+## Instalasi dan Penggunaan
 
-## ✨ Solusi: Cara Deploy yang Lebih Cerdas (Update v2.1)
+1. Kloning repositori ini.
 
-**Smart Git-FTP Deployer** menjembatani kekuatan **Git** dengan keterbatasan **FTP**. Aplikasi ini menggunakan riwayat *commit* di repositori Anda sebagai "sumber kebenaran" untuk menentukan dengan tepat apa saja yang perlu diubah di server Anda.
+   ```bash
+   git clone https://github.com/ridzidev/smart-git-ftp-deployer.git
+   cd smart-git-ftp-deployer
+   ```
 
-### Fitur Unggulan v2.1
+2. Jalankan aplikasi dari direktori repositori Anda sendiri (folder yang berisi `.git`).
 
--   ✅ **⚡ Quick Deploy (Latest):** Fitur paling canggih. Satu klik untuk otomatis Refresh, mengambil commit paling baru, dan langsung melakukan deployment tanpa perlu memilih manual.
--   ✅ **📂 Integrated FTP Browser:** Telusuri file di server FTP Anda secara langsung di dalam aplikasi (Explore & View remote structure).
--   ✅ **🗺️ Path Mapping Logic:** Mendukung pemetaan folder. Anda bisa memetakan folder lokal (misal: `dist/` atau `build/`) ke folder remote yang berbeda secara spesifik.
--   ✅ **Deploy Berbasis Commit:** Pilih satu atau rentang beberapa commit sekaligus untuk menghitung perbedaan file.
--   ✅ **Sinkronisasi Cerdas:** Otomatis mendeteksi file yang harus di-upload (**Added/Modified**) dan file yang harus dihapus (**Deleted**) di server.
--   ✅ **Antarmuka Grafis (GUI) Modern:** UI gelap (Cyberpunk 2026 style) yang nyaman di mata untuk memantau log secara real-time.
--   ✅ **🧹 Clear Log:** Bersihkan terminal log deployment dengan satu tombol untuk menjaga tampilan tetap rapi.
--   ✅ **Pola Pengecualian (Exclude):** Abaikan file/folder sensitif atau sampah seperti `.git`, `node_modules`, atau `.env`.
+   ```bash
+   python smart_deploy.py
+   ```
 
-## 🎯 Siapa yang Seharusnya Menggunakan Ini?
+3. Buka tab **Konfigurasi**, isi Host, User, dan Password FTP, direktori lokal, dan direktori remote. Aktifkan opsi **FTP over TLS (FTPS)** jika server mendukungnya, lalu simpan.
 
--   **Web developer** yang melakukan deployment ke **shared hosting** (cPanel/DirectAdmin) yang hanya menyediakan akses FTP.
--   Developer yang ingin kecepatan CI/CD tanpa setup server yang rumit.
--   Siapa saja yang ingin meminimalisir kesalahan "salah upload file" saat rilis fitur baru.
+4. Buka tab **Deployment Engine**, pilih commit atau rentang commit, tinjau daftar berkas yang akan diproses, kemudian mulai deployment.
 
-## 🚀 Panduan Memulai
+## Konfigurasi (deploy_config.json)
 
-### Prasyarat
+Konfigurasi disimpan dalam berkas `deploy_config.json` di lokasi yang sama dengan skrip. Aplikasi mengatur izin berkas ini menjadi `0600` setiap kali menyimpan.
 
--   **Python 3.x** terpasang di sistem Anda.
--   **Git** terpasang dan repositori lokal sudah di-init (`git init`).
+| Kunci | Keterangan |
+|---|---|
+| `FTP_HOST` | Host server FTP, contoh `ftp.domainanda.com` |
+| `FTP_USER` | Username FTP |
+| `FTP_PASS` | Password FTP |
+| `FTP_TLS` | `true` untuk memakai FTPS (kanal kontrol dan data terenkripsi) |
+| `LOCAL_DIR` | Direktori proyek lokal yang berisi `.git` |
+| `REMOTE_DIR` | Direktori tujuan di server, contoh `/public_html` |
+| `EXCLUDE_PATTERNS` | Daftar pola berkas yang tidak ikut diunggah |
+| `PATH_MAPPINGS` | Daftar pemetaan folder lokal ke folder remote |
+| `active_profile` | Nama profil aktif |
 
-### Instalasi & Penggunaan
+Nilai bawaan `EXCLUDE_PATTERNS`:
 
-1.  **Clone Repositori Ini**
-    ```bash
-    git clone https://github.com/ridzidev/smart-git-ftp-deployer.git
-    cd smart-git-ftp-deployer
-    ```
+```json
+["*.git*", ".env", "node_modules", "vendor", ".idea", ".vscode", ".DS_Store", "deploy_config.json"]
+```
 
-2.  **Konfigurasi Proyek Anda**
-    - Jalankan aplikasi: `python smart_deploy.py`.
-    - Pergi ke tab **"Configuration"**.
-    - Isi Host, User, Password FTP, serta direktori lokal dan remote.
-    - (Opsional) Tambahkan **Path Mapping** jika folder lokal dan remote Anda tidak simetris.
-    - Klik **Save Configuration**.
+Contoh `PATH_MAPPINGS`:
 
-3.  **Cara Deploy Cepat (Quick Mode)**
-    - Klik tombol **"⚡ QUICK DEPLOY (LATEST)"**.
-    - Aplikasi akan mengambil perubahan terbaru dari commit terakhir dan langsung mengirimnya ke server.
+```json
+[
+  { "local": "dist/", "remote": "public_html/app/" }
+]
+```
 
-4.  **Cara Deploy Manual (Selection Mode)**
-    - Pilih commit-commit tertentu di tabel Git History.
-    - Tinjau file di tabel "Staged for Deploy".
-    - Klik **"🚀 START DEPLOY"**.
+## Catatan Keamanan
 
-## ⚙️ Detail Konfigurasi (`deploy_config.json`)
+- Password FTP disimpan sebagai teks biasa dalam berkas konfigurasi. Aplikasi memitigasi hal ini dengan izin berkas `0600` dan pengecualian `deploy_config.json` pada daftar unggahan. Jangan pernah menambahkan berkas ini ke Git ataupun membagikannya.
+- Gunakan opsi FTPS bila server mendukungnya. FTP polos mengirim kredensial tanpa enkripsi, sehingga dapat dibaca pihak yang memantau jaringan.
+- Deployment hanya memproses berkas yang tercatat pada riwayat Git, sehingga berkas lokal seperti `.env` atau `.git` tidak pernah terunggah selama pola pengecualian belum diubah.
 
--   `FTP_HOST`: Hostname server FTP (contoh: `ftp.domainanda.com`).
--   `FTP_USER`: Username FTP.
--   `FTP_PASS`: Password FTP.
--   `LOCAL_DIR`: Path folder proyek lokal (yang ada folder `.git`).
--   `REMOTE_DIR`: Folder tujuan di server (contoh: `/public_html/`).
--   `PATH_MAPPINGS`: List pemetaan folder lokal ke remote.
--   `EXCLUDE_PATTERNS`: Daftar file yang dilarang di-upload.
+## Struktur Antarmuka
 
-## 🤝 Berkontribusi
+| Tab | Fungsi |
+|---|---|
+| Deployment Engine | Pemilihan commit, tinjauan antrean berkas, eksekusi, dan log |
+| Ekspor SQL | Menyusun riwayat commit menjadi pernyataan SQL |
+| Peramban Berkas | Menjelajahi direktori lokal dan server |
+| Konfigurasi | Pengelolaan profil, parameter server, dan pemetaan jalur |
 
-Kontribusi, isu, dan permintaan fitur sangat diterima! Jangan ragu untuk memeriksa [halaman isu](https://github.com/ridzidev/smart-git-ftp-deployer/issues).
+## Kontribusi
 
-1.  Fork Proyek ini.
-2.  Buat Branch Fitur Anda (`git checkout -b feature/FiturKeren`).
-3.  Commit Perubahan Anda (`git commit -m 'Menambahkan FiturKeren'`).
-4.  Push ke Branch (`git push origin feature/FiturKeren`).
-5.  Buka sebuah Pull Request.
+Kontribusi berupa laporan galat, usulan fitur, atau *pull request* diterima dengan terbuka. Untuk perubahan besar, buka *issue* terlebih dahulu agar dapat didiskusikan sebelum diterapkan.
 
-## 📜 Lisensi
+## Changelog
 
-Didistribusikan di bawah Lisensi MIT. Lihat file `LICENSE` untuk informasi lebih lanjut.
+### v2.2 — 2026-10-21
 
----
-Dibuat dengan ❤️ oleh [ridzidev](https://github.com/ridzidev)
+- Dukungan FTP over TLS (FTPS). Pengembang dapat mengaktifkan `FTP_TLS` untuk mengenkripsi kanal kontrol dan data pada Deployment Engine maupun peramban server.
+- Berkas `deploy_config.json` otomatis diatur izin `0600` setiap kali aplikasi menyimpannya.
+- Nomor versi ditampilkan pada judul jendela dan log awal aplikasi.
+- `.gitignore` dirapikan: `smart_deploy.py` tidak lagi diabaikan (berkas memang didistribusikan), ditambah `.env` dan `__pycache__/`.
+- Riwayat repositori dibersihkan dari berkas konfigurasi yang memuat kredensial; screenshot diganti dengan versi yang disamarkan.
+- Dokumentasi ditulis ulang; berkas `LICENSE` ditambahkan.
+
+### v2.1.x — April dan Agustus 2026
+
+- Hasil ekspor SQL dapat disalin langsung ke *clipboard*.
+- Perbaikan pengelolaan profil: penambahan, penggantian, dan penghapusan profil menjadi lebih andal.
+
+### v2.1 — 2026-01-05
+
+- Pemilihan komit terbaru secara otomatis dan pemilihan rentang commit.
+- Mode bertahap per komit dan mode akumulatif; pilihan berhenti otomatis saat galat.
+- Tombol pembatalan deployment di tengah proses.
+- Tab ekspor riwayat commit ke SQL.
+- Muat ulang riwayat otomatis saat jendela kembali mendapat fokus, ditambah pintasan F5.
+
+### v2.0 — 2026-01-05
+
+- Antarmuka dibangun ulang dengan tema gelap dan konsol log berwarna.
+- Peramban berkas lokal dan server berbasis struktur pohon.
+- Pemetaan jalur (path mapping) antara folder lokal dan folder remote.
+- Peningkatan pengelolaan konfigurasi multi profil.
+
+### v1.0 — 2025-10-18
+
+- Rilis awal: deployment berbasis *diff* Git melalui FTP dengan berkas konfigurasi JSON.
+
+## Lisensi
+
+Didistribusikan di bawah Lisensi MIT — lihat berkas `LICENSE`.
+
+Dibuat oleh [ridzidev](https://github.com/ridzidev).

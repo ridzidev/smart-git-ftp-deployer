@@ -6,13 +6,14 @@ Aplikasi desktop (Python/Tkinter) untuk deployment berbasis Git ke server hostin
 
 Cocok digunakan pada *shared hosting* (cPanel/DirectAdmin) yang tidak menyediakan akses SSH, sehingga pipeline deployment berbasis Git dapat tetap berjalan.
 
-**Versi 2.3**
+**Versi 2.4**
 
 ![Tampilan utama Deployment Engine](screenshoot1.png)
 
 ## Fitur
 
 - **Deployment berbasis commit** — pilih satu commit atau rentang commit; aplikasi menghitung berkas yang ditambahkan, diubah, dan dihapus dari *diff* Git.
+- **Saring rentang tanggal** — preset cepat *(hari ini, 3/7/14/30/90 hari terakhir, minggu/bulan/tahun ini maupun tahun lalu)* plus pemilih tanggal kalender untuk mengisolasi commit dari periode tertentu, lengkap dengan hitungan `"X dari Y komit"` secara langsung, tersedia di tab Deployment Engine dan Ekspor SQL.
 - **Dua mode eksekusi** — bertahap (setiap commit diproses berurutan) atau akumulatif (satu batch untuk rentang commit). Opsi berhenti otomatis saat terjadi galat (*fail-fast*) dan pembatalan di tengah proses.
 - **FTP dan FTPS** — opsi FTP over TLS untuk enkripsi kanal kontrol dan data.
 - **Multi profil** — sejumlah konfigurasi server dapat disimpan dalam satu berkas dan diganti secara langsung.

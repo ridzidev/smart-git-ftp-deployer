@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from queue import Queue
 
-APP_VERSION = "2.3"
+APP_VERSION = "2.4"
 
 
 CONFIG_FILENAME = "deploy_config.json"

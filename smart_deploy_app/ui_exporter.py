@@ -3,6 +3,7 @@ import time
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_TEXT
+from .ui_date_filter import DateRangeFilter, tanggal_komit
 
 class ExporterTabMixin:
 
@@ -44,6 +45,17 @@ class ExporterTabMixin:
         ttk.Button(r1, text="Terapkan Rentang", command=self.apply_export_range, style="Primary.TButton").pack(side=tk.LEFT, padx=3)
         ttk.Button(r1, text="Semua", command=self.preset_select_all, style="Secondary.TButton").pack(side=tk.LEFT, padx=2)
         ttk.Button(r1, text="50 Terakhir", command=self.preset_select_last_50, style="Secondary.TButton").pack(side=tk.LEFT, padx=2)
+
+        r1b = ttk.Frame(ctrl_frame)
+        r1b.pack(fill=tk.X, pady=(6, 2))
+
+        self.date_filter_export = DateRangeFilter(
+            r1b,
+            on_change=self.filter_exporter_commits,
+            on_apply=self.apply_date_range_export,
+            teks_tombol="Pilih Rentang Ini",
+        )
+        self.date_filter_export.pack(fill=tk.X)
 
         r2 = ttk.Frame(ctrl_frame)
         r2.pack(fill=tk.X, pady=(8, 0))
@@ -105,18 +117,9 @@ class ExporterTabMixin:
 
     # ---------- load_all_commits_for_exporter ----------
     def load_all_commits_for_exporter(self):
-        self.export_tree.delete(*self.export_tree.get_children())
         total = len(self.all_commits)
         self.lbl_real_total.config(text=f"Total Komit: {total}")
-
-        for c in self.all_commits:
-            self.export_tree.insert("", "end", iid=str(c["index"]), values=(
-                f"#{c['index']}",
-                c["hash"][:8],
-                c["date"],
-                c["author"],
-                c["subject"]
-            ))
+        self.filter_exporter_commits()
 
         self.ent_range_start.delete(0, tk.END)
         self.ent_range_start.insert(0, "1")
@@ -125,6 +128,53 @@ class ExporterTabMixin:
 
         self.lbl_export_status.config(text=f"Memuat {total} komit. Tentukan rentang indeks untuk ekspor.")
         self.generate_sql_query(1, total)
+
+    # ---------- filter_exporter_commits ----------
+    def filter_exporter_commits(self):
+        """Tampilkan ulang daftar komit sesuai saringan tanggal (tanpa batas = semua)."""
+        tgl_dari, tgl_sampai = (self.date_filter_export.get_range()
+                                if hasattr(self, "date_filter_export") else (None, None))
+        saring_tanggal = bool(tgl_dari or tgl_sampai)
+
+        self.export_tree.delete(*self.export_tree.get_children())
+        tampil = 0
+        for c in self.all_commits:
+            if saring_tanggal:
+                c_tgl = tanggal_komit(c)
+                if c_tgl is None:
+                    continue
+                if tgl_dari and c_tgl < tgl_dari:
+                    continue
+                if tgl_sampai and c_tgl > tgl_sampai:
+                    continue
+            self.export_tree.insert("", "end", iid=str(c["index"]), values=(
+                f"#{c['index']}",
+                c["hash"][:8],
+                c["date"],
+                c["author"],
+                c["subject"]
+            ))
+            tampil += 1
+
+        if hasattr(self, "date_filter_export"):
+            self.date_filter_export.set_hitung(tampil, len(self.all_commits), saring_tanggal)
+
+    # ---------- apply_date_range_export ----------
+    def apply_date_range_export(self):
+        """Pilih rentang ekspor sesuai hasil saringan tanggal yang tampil saat ini."""
+        if not self.date_filter_export.terapkan_valid():
+            return
+
+        indeks = sorted(int(i) for i in self.export_tree.get_children() if str(i).isdigit())
+        if not indeks:
+            messagebox.showinfo("Informasi", "Tidak ada komit dalam rentang tanggal ini.")
+            return
+
+        self.ent_range_start.delete(0, tk.END)
+        self.ent_range_start.insert(0, str(indeks[0]))
+        self.ent_range_end.delete(0, tk.END)
+        self.ent_range_end.insert(0, str(indeks[-1]))
+        self.apply_export_range()
 
     # ---------- preset_select_all ----------
     def preset_select_all(self):
@@ -159,9 +209,12 @@ class ExporterTabMixin:
             messagebox.showwarning("Peringatan", f"Rentang nomor tidak valid (1 s/d {total}).")
             return
 
-        self.export_tree.selection_set([str(i) for i in range(start_no, end_no + 1)])
-        if str(start_no) in self.export_tree.get_children():
-            self.export_tree.see(str(start_no))
+        kandidat = [str(i) for i in range(start_no, end_no + 1)]
+        ada = [iid for iid in kandidat if self.export_tree.exists(iid)]
+
+        self.export_tree.selection_set(ada)
+        if ada:
+            self.export_tree.see(ada[0])
 
         count = (end_no - start_no) + 1
         self.lbl_export_status.config(text=f"Memilih {count} komit (#{start_no} s/d #{end_no}).")

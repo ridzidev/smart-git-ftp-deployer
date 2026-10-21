@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 from .config import log_queue, resolve_remote_path
 from .ftp_deployer import FTPDeployer
+from .ui_date_filter import DateRangeFilter, tanggal_komit
 from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_TEXT
 
 class DeployTabMixin:
@@ -72,6 +73,16 @@ class DeployTabMixin:
 
         self.btn_start_deploy = ttk.Button(r2, text="Mulai Deployment", command=self.start_deploy, state=tk.DISABLED, style="Primary.TButton")
         self.btn_start_deploy.pack(side=tk.RIGHT, padx=4)
+
+        date_box = ttk.Frame(left_frame)
+        date_box.pack(fill=tk.X, pady=(0, 4))
+
+        self.date_filter_deploy = DateRangeFilter(
+            date_box,
+            on_change=self.filter_deployment_commits,
+            on_apply=self.apply_date_range_deploy,
+        )
+        self.date_filter_deploy.pack(fill=tk.X)
 
         search_box = ttk.Frame(left_frame)
         search_box.pack(fill=tk.X, pady=(0, 4))
@@ -168,7 +179,12 @@ class DeployTabMixin:
     # ---------- filter_deployment_commits ----------
     def filter_deployment_commits(self):
         query = self.ent_search.get().strip().lower() if hasattr(self, "ent_search") else ""
+        tgl_dari, tgl_sampai = (self.date_filter_deploy.get_range()
+                                if hasattr(self, "date_filter_deploy") else (None, None))
+        saring_tanggal = bool(tgl_dari or tgl_sampai)
+
         self.commit_tree.delete(*self.commit_tree.get_children())
+        tampil = 0
         for c in reversed(self.all_commits):
             if query:
                 match = (query in c["hash"].lower() or
@@ -177,12 +193,38 @@ class DeployTabMixin:
                          query == str(c["index"]))
                 if not match:
                     continue
+            if saring_tanggal:
+                c_tgl = tanggal_komit(c)
+                if c_tgl is None:
+                    continue
+                if tgl_dari and c_tgl < tgl_dari:
+                    continue
+                if tgl_sampai and c_tgl > tgl_sampai:
+                    continue
             self.commit_tree.insert(
                 "",
                 "end",
                 iid=str(c["index"]),
                 values=(f"#{c['index']}", c["hash"][:8], c["date"], c["author"], c["subject"])
             )
+            tampil += 1
+
+        if hasattr(self, "date_filter_deploy"):
+            self.date_filter_deploy.set_hitung(tampil, len(self.all_commits), saring_tanggal)
+
+    # ---------- apply_date_range_deploy ----------
+    def apply_date_range_deploy(self):
+        """Pilih rentang commit sesuai hasil saringan tanggal yang tampil saat ini."""
+        indeks = sorted(int(i) for i in self.commit_tree.get_children() if str(i).isdigit())
+        if not indeks:
+            messagebox.showinfo("Informasi", "Tidak ada komit dalam rentang tanggal ini.")
+            return
+
+        self.ent_dep_start.delete(0, tk.END)
+        self.ent_dep_start.insert(0, str(indeks[0]))
+        self.ent_dep_end.delete(0, tk.END)
+        self.ent_dep_end.insert(0, str(indeks[-1]))
+        self.apply_deploy_range()
 
     # ---------- select_latest_commit ----------
     def select_latest_commit(self):

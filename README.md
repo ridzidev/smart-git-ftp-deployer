@@ -2,30 +2,32 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Aplikasi desktop (Python/Tkinter) untuk deployment berbasis Git ke server hosting yang hanya menyediakan akses FTP. Aplikasi membaca riwayat *commit* repositori lokal, menghitung daftar berkas yang berubah antar *commit*, lalu mengunggah atau menghapus berkas tersebut di server melalui FTP/FTPS.
+Aplikasi desktop berbasis Python dan Tkinter untuk melakukan deploy proyek Git ke server yang hanya menyediakan akses FTP. Aplikasi membaca riwayat commit pada repositori lokal, menghitung berkas yang berubah antar commit, lalu mengunggah atau menghapus berkas tersebut di server.
 
-Cocok digunakan pada *shared hosting* (cPanel/DirectAdmin) yang tidak menyediakan akses SSH, sehingga pipeline deployment berbasis Git dapat tetap berjalan.
+Aplikasi ini cocok dipakai di shared hosting (cPanel atau DirectAdmin) yang tidak menyediakan akses SSH. Dengan begitu, alur deploy berbasis commit tetap bisa berjalan seperti biasa.
 
-**Versi 2.4**
+Versi 2.5
 
 ![Tampilan utama Deployment Engine](screenshoot1.png)
 
 ## Fitur
 
-- **Deployment berbasis commit** — pilih satu commit atau rentang commit; aplikasi menghitung berkas yang ditambahkan, diubah, dan dihapus dari *diff* Git.
-- **Saring rentang tanggal** — preset cepat *(hari ini, 3/7/14/30/90 hari terakhir, minggu/bulan/tahun ini maupun tahun lalu)* plus pemilih tanggal kalender untuk mengisolasi commit dari periode tertentu, lengkap dengan hitungan `"X dari Y komit"` secara langsung, tersedia di tab Deployment Engine dan Ekspor SQL.
-- **Dua mode eksekusi** — bertahap (setiap commit diproses berurutan) atau akumulatif (satu batch untuk rentang commit). Opsi berhenti otomatis saat terjadi galat (*fail-fast*) dan pembatalan di tengah proses.
-- **FTP dan FTPS** — opsi FTP over TLS untuk enkripsi kanal kontrol dan data.
-- **Multi profil** — sejumlah konfigurasi server dapat disimpan dalam satu berkas dan diganti secara langsung.
-- **Peramban berkas** — menjelajahi struktur direktori lokal dan server pada antarmuka yang sama.
-- **Pemetaan jalur (path mapping)** — memetakan folder lokal ke folder remote yang berbeda, contohnya `dist/` ke `public_html/app/`.
-- **Ekspor riwayat commit** — menyusun daftar commit menjadi pernyataan SQL yang dapat disimpan sebagai berkas atau disalin ke *clipboard*.
-- **Konsol eksekusi** — log berwarna dengan progres per berkas dan stempel waktu.
+- Deployment berbasis commit. Pilih satu commit atau rentang commit, lalu aplikasi menghitung berkas yang ditambahkan, diubah, dan dihapus dari diff Git.
+- Saring rentang tanggal. Menu preset cepat seperti 7 hari terakhir, bulan lalu, atau tahun lalu, lengkap dengan pemilih tanggal kalender. Hitungan hasil saringan tampil langsung, tersedia di tab Deployment Engine dan Ekspor SQL.
+- Dua mode eksekusi, yaitu bertahap (satu commit diproses satu per satu) dan akumulatif (satu batch untuk satu rentang). Ada opsi berhenti saat galat dan tombol batalkan di tengah proses.
+- FTP dan FTPS. Aktifkan opsi FTP over TLS untuk mengenkripsi kanal kontrol dan data.
+- Multi profil. Sejumlah konfigurasi server bisa disimpan dalam satu berkas dan dipilih sesuai kebutuhan.
+- Konfigurasi terenkripsi. Berkas konfigurasi disimpan terenkripsi AES-256-GCM sehingga password FTP tidak berjajar sebagai teks biasa.
+- Peramban berkas. Menjelajahi struktur direktori lokal dan server dalam satu tampilan.
+- Pemetaan jalur. Folder lokal bisa dipetakan ke folder remote yang berbeda, misalnya dist/ ke public_html/app/.
+- Ekspor riwayat commit ke bentuk query SQL yang bisa disimpan sebagai berkas atau disalin ke clipboard.
+- Konsol eksekusi berwarna dengan progres per berkas dan stempel waktu.
 
 ## Persyaratan
 
-- Python 3.8 atau lebih baru (pastikan paket **Tkinter** tersedia; pada beberapa distribusi terpisah sebagai `python3-tk`).
-- Git yang dapat dijalankan dari baris perintah.
+- Python 3.8 atau lebih baru. Pastikan paket Tkinter tersedia; pada sebagian distro Linux terpasang terpisah bernama python3-tk.
+- Git yang bisa dijalankan dari baris perintah.
+- Paket `cryptography` untuk membuka dan menyimpan berkas konfigurasi terenkripsi.
 
 ## Instalasi dan Penggunaan
 
@@ -36,21 +38,37 @@ Cocok digunakan pada *shared hosting* (cPanel/DirectAdmin) yang tidak menyediaka
    cd smart-git-ftp-deployer
    ```
 
-2. Jalankan aplikasi dari folder repositori ini (biarkan seluruh berkas tetap bersama).
+2. Pasang dependensi.
 
    ```bash
-   python app.py
+   python3 -m pip install --user cryptography
    ```
 
-   Berkas `smart_deploy.py` masih tersedia sebagai pemanggil kompatibilitas, sama saja dengan `python smart_deploy.py`.
+3. Jalankan aplikasi dari folder repositori ini.
 
-3. Buka tab **Konfigurasi**, isi Host, User, dan Password FTP, direktori lokal, dan direktori remote. Aktifkan opsi **FTP over TLS (FTPS)** jika server mendukungnya, lalu simpan.
+   ```bash
+   python3 app.py
+   ```
 
-4. Buka tab **Deployment Engine**, pilih commit atau rentang commit, tinjau daftar berkas yang akan diproses, kemudian mulai deployment.
+   Berkas `smart_deploy.py` masih tersedia sebagai pemanggil kompatibilitas, sama saja dengan `python3 smart_deploy.py`.
 
-## Konfigurasi (deploy_config.json)
+4. Buka tab Konfigurasi, isi Host, User, dan Password FTP, direktori lokal, dan direktori remote. Aktifkan opsi FTP over TLS bila server mendukungnya, lalu tekan Simpan Konfigurasi Profil. Saat pertama kali disimpan, berkas konfigurasi otomatis berubah menjadi brankas terenkripsi dan berkas kunci dibuat di komputer Anda.
 
-Konfigurasi disimpan dalam berkas `deploy_config.json` di lokasi yang sama dengan skrip. Aplikasi mengatur izin berkas ini menjadi `0600` setiap kali menyimpan.
+5. Buka tab Deployment Engine, pilih commit atau rentang commit, tinjau daftar berkas yang akan diproses, kemudian mulai deployment.
+
+## Berkas Konfigurasi (deploy_config.json)
+
+Aplikasi membaca `deploy_config.json` di folder yang sama dengan `app.py`. Isi berkas bercorak seperti berikut, berupa satu segmen sandi:
+
+```json
+{
+  "app": "smart-git-ftp-deployer",
+  "format": "AESGCM-256/v1",
+  "vault": "gAAAA..."
+}
+```
+
+Isi di dalam brankas berupa kumpulan profil. Setiap profil menyimpan kolom berikut:
 
 | Kunci | Keterangan |
 |---|---|
@@ -62,7 +80,6 @@ Konfigurasi disimpan dalam berkas `deploy_config.json` di lokasi yang sama denga
 | `REMOTE_DIR` | Direktori tujuan di server, contoh `/public_html` |
 | `EXCLUDE_PATTERNS` | Daftar pola berkas yang tidak ikut diunggah |
 | `PATH_MAPPINGS` | Daftar pemetaan folder lokal ke folder remote |
-| `active_profile` | Nama profil aktif |
 
 Nilai bawaan `EXCLUDE_PATTERNS`:
 
@@ -78,24 +95,40 @@ Contoh `PATH_MAPPINGS`:
 ]
 ```
 
+Berkas konfigurasi versi lama yang masih berupa teks biasa tetap bisa dibuka. Bentuknya berubah menjadi brankas terenkripsi otomatis setelah pertama kali tekan Simpan Konfigurasi Profil.
+
+## Kunci Brankas
+
+Enkripsi memakai AES-256-GCM dengan kunci 32 byte acak yang tidak pernah ditulis di dalam berkas konfigurasi. Kunci dicari dengan urutan berikut:
+
+1. Variabel lingkungan `SMART_DEPLOY_KEY`, berisi kunci dalam bentuk base64. Cocok untuk pengguna tingkat lanjut atau lintas mesin.
+2. Berkas `~/.smart_git_ftp_deployer.key`. Berkas ini dibuat otomatis dengan izin `0600` saat pertama kali dibutuhkan.
+
+Simpan cadangan berkas kunci di tempat aman, misalnya lokasi yang terikut cadangan Time Machine. Apabila kunci hilang atau tidak cocok, isi brankas tidak dapat dibuka dan aplikasi menolak menyimpan konfigurasi supaya data lama tidak tertimpa konfigurasi kosong. Untuk memindahkan konfigurasi ke mesin lain, cukup salin `deploy_config.json` bersama berkas kuncinya.
+
 ## Catatan Keamanan
 
-- Password FTP disimpan sebagai teks biasa dalam berkas konfigurasi. Aplikasi memitigasi hal ini dengan izin berkas `0600` dan pengecualian `deploy_config.json` pada daftar unggahan. Jangan pernah menambahkan berkas ini ke Git ataupun membagikannya.
-- Gunakan opsi FTPS bila server mendukungnya. FTP polos mengirim kredensial tanpa enkripsi, sehingga dapat dibaca pihak yang memantau jaringan.
+- Konfigurasi tersimpan terenkripsi sejak versi 2.5. Password, host, dan username tidak berjajar sebagai teks biasa di dalam `deploy_config.json`.
+- Setiap penyimpanan memakai garam acak baru, jadi hasil sandi tidak sama meskipun kontennya tidak berubah.
+- Berkas `deploy_config.json` telah dikecualikan di `.gitignore`. Jangan pernah membagikan berkas ini bersama berkas kuncinya kepada orang lain secara bersamaan.
+- Gunakan opsi FTPS bila server mendukungnya. FTP polos mengirim kredensial tanpa enkripsi sehingga bisa dibaca pihak yang memantau jaringan.
 - Deployment hanya memproses berkas yang tercatat pada riwayat Git, sehingga berkas lokal seperti `.env` atau `.git` tidak pernah terunggah selama pola pengecualian belum diubah.
 
 ## Struktur Berkas
 
-Kode sistem dibagikan per fitur dalam paket `smart_deploy_app/`:
+Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 
 | Berkas | Isi |
 |---|---|
 | `app.py` | Titik masuk aplikasi |
 | `smart_deploy.py` | Pemanggil kompatibilitas (menyalurkan pada `app.py`) |
 | `smart_deploy_app/config.py` | Konfigurasi bawaan, penyimpanan profil, utilitas jalur |
+| `smart_deploy_app/secure_store.py` | Brankas enkripsi AES-256-GCM dan pengelolaan kunci |
 | `smart_deploy_app/theme.py` | Palet warna antarmuka |
 | `smart_deploy_app/git_manager.py` | Pembaca riwayat dan diff Git |
 | `smart_deploy_app/ftp_deployer.py` | Transport FTP/FTPS |
+| `smart_deploy_app/ui_date_filter.py` | Widget saring rentang tanggal dan kalender pilih tanggal |
+| `smart_deploy_app/ui_dropdown.py` | Widget dropdown pilihan buatan sendiri (pengganti popdown ttk.Combobox) |
 | `smart_deploy_app/ui_deploy.py` | Tab Deployment Engine |
 | `smart_deploy_app/ui_exporter.py` | Tab Ekspor SQL |
 | `smart_deploy_app/ui_browser.py` | Tab Peramban Berkas |
@@ -106,58 +139,36 @@ Kode sistem dibagikan per fitur dalam paket `smart_deploy_app/`:
 
 | Tab | Fungsi |
 |---|---|
-| Deployment Engine | Pemilihan commit, tinjauan antrean berkas, eksekusi, dan log |
+| Deployment Engine | Pemilihan commit, saring tanggal, tinjauan antrean berkas, eksekusi, dan log |
 | Ekspor SQL | Menyusun riwayat commit menjadi pernyataan SQL |
 | Peramban Berkas | Menjelajahi direktori lokal dan server |
 | Konfigurasi | Pengelolaan profil, parameter server, dan pemetaan jalur |
 
 ## Kontribusi
 
-Kontribusi berupa laporan galat, usulan fitur, atau *pull request* diterima dengan terbuka. Untuk perubahan besar, buka *issue* terlebih dahulu agar dapat didiskusikan sebelum diterapkan.
+Kontribusi berupa laporan galat, usulan fitur, atau pull request diterima dengan terbuka. Untuk perubahan besar, buka issue terlebih dahulu agar bisa didiskusikan sebelum diterapkan.
 
 ## Changelog
 
-### v2.3 — 2026-10-21
+### v2.5 (2026-10-21)
 
-- Struktur kode dipecah per fitur ke dalam paket `smart_deploy_app` (konfigurasi, tema, Git, FTP, serta satu modul per tab antarmuka).
-- `app.py` menjadi titik masuk aplikasi; `smart_deploy.py` dijadikan pemanggil kompatibilitas.
-- Perilaku aplikasi tidak berubah; berkas konfigurasi dan profil lama tetap didukung tanpa penyesuaian.
+- `deploy_config.json` kini disimpan sebagai brankas terenkripsi AES-256-GCM. Password FTP tidak lagi ditulis sebagai teks biasa. Kunci brankas berada di `~/.smart_git_ftp_deployer.key` atau variabel lingkungan `SMART_DEPLOY_KEY`, tidak pernah berada di dalam berkas konfigurasi.
+- Penyimpanan ditolak ketika kunci tidak cocok, dengan tujuan melindungi isi brankas asli agar tidak tertimpa konfigurasi kosong.
+- Perbaikan: berkas konfigurasi kembali terbaca dari folder `app.py`. Sejak penataan ulang v2.3, aplikasi mencarinya di folder paket sehingga daftar profil tampil kosong.
+- Dropdown pilihan digayakan untuk tema gelap, termasuk daftar pada macOS mode gelap yang sebelumnya sulit dibaca.
+- Konfigurasi bentuk lama dimigrasikan otomatis saat pertama kali disimpan. `cryptography` kini menjadi dependensi aplikasi.
 
-### v2.2 — 2026-10-21
+### v2.4 (2026-10-21)
 
-- Dukungan FTP over TLS (FTPS). Pengembang dapat mengaktifkan `FTP_TLS` untuk mengenkripsi kanal kontrol dan data pada Deployment Engine maupun peramban server.
+- Saring rentang tanggal pada tab Deployment Engine dan Ekspor SQL. Terdiri dari preset cepat, isian tanggal bebas, dan pemilih tanggal kalender beserta hitungan hasil saringan yang selaras antar daftar.
+
+### v2.3 (2026-10-21)
+
+- Struktur kode dipecah per pekerjaan ke dalam paket `smart_deploy_app`, mencakup konfigurasi, tema, Git, FTP, serta satu modul per tab antarmuka.
+- `app.py` menjadi titik masuk aplikasi, dan `smart_deploy.py` dijadikan pemanggil kompatibilitas.
+- Perilaku aplikasi tidak berubah. Berkas konfigurasi dan profil lama tetap didukung tanpa penyesuaian.
+
+### v2.2 (2026-10-21)
+
+- Dukungan FTP over TLS (FTPS). Opsi `FTP_TLS` mengenkripsi kanal kontrol dan data pada Deployment Engine maupun peramban server.
 - Berkas `deploy_config.json` otomatis diatur izin `0600` setiap kali aplikasi menyimpannya.
-- Nomor versi ditampilkan pada judul jendela dan log awal aplikasi.
-- `.gitignore` dirapikan: `smart_deploy.py` tidak lagi diabaikan (berkas memang didistribusikan), ditambah `.env` dan `__pycache__/`.
-- Riwayat repositori dibersihkan dari berkas konfigurasi yang memuat kredensial; screenshot diganti dengan versi yang disamarkan.
-- Dokumentasi ditulis ulang; berkas `LICENSE` ditambahkan.
-
-### v2.1.x — April dan Agustus 2026
-
-- Hasil ekspor SQL dapat disalin langsung ke *clipboard*.
-- Perbaikan pengelolaan profil: penambahan, penggantian, dan penghapusan profil menjadi lebih andal.
-
-### v2.1 — 2026-01-05
-
-- Pemilihan komit terbaru secara otomatis dan pemilihan rentang commit.
-- Mode bertahap per komit dan mode akumulatif; pilihan berhenti otomatis saat galat.
-- Tombol pembatalan deployment di tengah proses.
-- Tab ekspor riwayat commit ke SQL.
-- Muat ulang riwayat otomatis saat jendela kembali mendapat fokus, ditambah pintasan F5.
-
-### v2.0 — 2026-01-05
-
-- Antarmuka dibangun ulang dengan tema gelap dan konsol log berwarna.
-- Peramban berkas lokal dan server berbasis struktur pohon.
-- Pemetaan jalur (path mapping) antara folder lokal dan folder remote.
-- Peningkatan pengelolaan konfigurasi multi profil.
-
-### v1.0 — 2025-10-18
-
-- Rilis awal: deployment berbasis *diff* Git melalui FTP dengan berkas konfigurasi JSON.
-
-## Lisensi
-
-Didistribusikan di bawah Lisensi MIT — lihat berkas `LICENSE`.
-
-Dibuat oleh [ridzidev](https://github.com/ridzidev).

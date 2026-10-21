@@ -353,7 +353,7 @@ class DeployTabMixin:
     def abort_deployment(self):
         if self.is_deploying:
             self.abort_deploy_event.set()
-            log_queue.put("[WARN] Mengirim sinyal pembatalan ke engine deployment...")
+            log_queue.put("[WARN] Permintaan pembatalan diterima, menunggu proses berhenti...")
             self.lbl_progress_status.config(text="Status: Membatalkan...")
             self.btn_abort.config(state=tk.DISABLED)
 
@@ -389,7 +389,7 @@ class DeployTabMixin:
 
                     c_idx = commit["index"]
                     c_hash = commit["hash"][:8]
-                    log_queue.put(f"[STAGE {i}/{len(tasks)}] Memproses Komit #{c_idx} [{c_hash}]: {commit['subject']}")
+                    log_queue.put(f"[INFO] Tahap {i}/{len(tasks)}: Komit #{c_idx} [{c_hash}] {commit['subject']}")
 
                     for f in diff["deleted"]:
                         if self.abort_deploy_event.is_set(): break
@@ -397,7 +397,7 @@ class DeployTabMixin:
                         processed += 1
                         self._update_progress_ui(processed, total_ops)
                         if not ok and fail_fast:
-                            log_queue.put(f"[ERROR] Operasi gagal pada berkas {f}. Proses dihentikan.")
+                            log_queue.put(f"[ERROR] Gagal memproses berkas {f}. Deployment dihentikan.")
                             success_all = False
                             break
 
@@ -410,7 +410,7 @@ class DeployTabMixin:
                         processed += 1
                         self._update_progress_ui(processed, total_ops)
                         if not ok and fail_fast:
-                            log_queue.put(f"[ERROR] Operasi unggah gagal pada berkas {f}. Proses dihentikan.")
+                            log_queue.put(f"[ERROR] Gagal mengunggah berkas {f}. Deployment dihentikan.")
                             success_all = False
                             break
 
@@ -446,8 +446,8 @@ class DeployTabMixin:
                             success_all = False
                             break
 
-        except Exception as e:
-            log_queue.put(f"[ERROR] Terjadi eksepsi fatal selama deployment: {e}")
+        except Exception:
+            log_queue.put("[ERROR] Deployment berhenti karena masalah teknis yang tidak terduga.")
             success_all = False
 
         deployer.disconnect()

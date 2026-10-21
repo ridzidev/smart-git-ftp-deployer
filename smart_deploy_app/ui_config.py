@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 from .config import DEFAULT_CONFIG, save_config_store, log_queue
 from .theme import CLR_BG
+from .ui_dropdown import TombolDropdown
 
 class ConfigTabMixin:
 
@@ -16,17 +17,14 @@ class ConfigTabMixin:
 
         ttk.Label(profile_frame, text="Profil Aktif:").pack(side=tk.LEFT, padx=(0, 8))
 
-        self.profile_var = tk.StringVar(value=self.active_profile)
-        self.profile_combo = ttk.Combobox(
+        self.profile_combo = TombolDropdown(
             profile_frame,
-            textvariable=self.profile_var,
-            state="readonly",
-            font=("Segoe UI", 9),
-            width=28
+            pilihan=list(self.config_store["profiles"].keys()),
+            nilai=self.active_profile,
+            on_pilih=self.on_profile_change,
+            lebar=28
         )
-        self.profile_combo["values"] = list(self.config_store["profiles"].keys())
         self.profile_combo.pack(side=tk.LEFT, padx=4)
-        self.profile_combo.bind("<<ComboboxSelected>>", self.on_profile_change)
 
         ttk.Button(profile_frame, text="Tambah Profil", command=self.add_profile, style="Secondary.TButton").pack(side=tk.LEFT, padx=4)
         ttk.Button(profile_frame, text="Hapus Profil", command=self.delete_profile, style="Danger.TButton").pack(side=tk.LEFT, padx=4)
@@ -77,6 +75,9 @@ class ConfigTabMixin:
         for m in self.config_data.get("PATH_MAPPINGS", []):
             self.map_tree.insert("", "end", values=(m["local"], m["remote"]))
 
+        ttk.Label(container, text="Data server Anda disimpan dengan aman.",
+                  style="Muted.TLabel").pack(fill=tk.X, pady=(0, 6))
+
         ttk.Button(container, text="Simpan Konfigurasi Profil", command=self.save_config_ui, style="Primary.TButton").pack(fill=tk.X, ipady=4)
 
     # ---------- populate_form_from_config ----------
@@ -93,7 +94,7 @@ class ConfigTabMixin:
 
     # ---------- on_profile_change ----------
     def on_profile_change(self, event=None):
-        selected_name = self.profile_var.get()
+        selected_name = self.profile_combo.get()
         if selected_name not in self.config_store["profiles"]:
             return
 
@@ -135,8 +136,8 @@ class ConfigTabMixin:
         self.config_store["profiles"][new_name] = current_active
         self.config_store["active_profile"] = new_name
 
-        self.profile_combo["values"] = list(self.config_store["profiles"].keys())
-        self.profile_var.set(new_name)
+        self.profile_combo.pilihan = list(self.config_store["profiles"].keys())
+        self.profile_combo.atur(new_name)
         self.on_profile_change()
         messagebox.showinfo("Informasi", f"Profil '{new_name}' berhasil dibuat.")
 
@@ -155,8 +156,8 @@ class ConfigTabMixin:
             self.active_profile = new_active
             self.config_store["active_profile"] = new_active
 
-            self.profile_combo["values"] = list(profiles.keys())
-            self.profile_var.set(new_active)
+            self.profile_combo.pilihan = list(profiles.keys())
+            self.profile_combo.atur(new_active)
             self.on_profile_change()
             messagebox.showinfo("Informasi", f"Profil '{deleted_name}' telah dihapus.")
 
@@ -209,3 +210,8 @@ class ConfigTabMixin:
         if save_config_store(self.config_store):
             messagebox.showinfo("Informasi", f"Konfigurasi profil '{self.active_profile}' tersimpan.")
             self.init_git()
+        else:
+            messagebox.showerror(
+                "Gagal Menyimpan",
+                "Konfigurasi gagal tersimpan. Rinciannya ada di konsol eksekusi (tab Deployment Engine). "
+                "Data konfigurasi lama tidak berubah.")

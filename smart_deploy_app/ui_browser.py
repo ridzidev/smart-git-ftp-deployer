@@ -86,8 +86,8 @@ class BrowserTabMixin:
                     self.browser_ftp = ftplib.FTP(cfg["FTP_HOST"], cfg["FTP_USER"], cfg["FTP_PASS"], timeout=15)
                 self.browser_ftp.set_pasv(True)
                 return True
-            except Exception as e:
-                log_queue.put(f"[ERROR] Koneksi FTP browser gagal: {e}")
+            except Exception:
+                log_queue.put("[ERROR] Koneksi ke server gagal. Periksa host, user, dan password di tab Konfigurasi.")
                 return False
 
     # ---------- refresh_remote_tree ----------
@@ -137,8 +137,8 @@ class BrowserTabMixin:
                                     continue
                                 is_dir = line.startswith("d") or "<DIR>" in line.upper()
                                 items.append((name, is_dir))
-                        except Exception as e2:
-                            log_queue.put(f"[FTP ERROR] Gagal membaca direktori: {e2}")
+                        except Exception:
+                            log_queue.put("[ERROR] Gagal membaca isi direktori server.")
 
                     items.sort(key=lambda x: (not x[1], x[0].lower()))
 
@@ -163,8 +163,8 @@ class BrowserTabMixin:
                         self.remote_tree.item(parent_node, open=True)
 
                     self.after(0, fill_ui)
-            except Exception as e:
-                log_queue.put(f"[FTP ERROR] Pembacaan gagal: {e}")
+            except Exception:
+                log_queue.put("[ERROR] Gagal membaca isi direktori server.")
                 self.after(0, lambda: self.remote_tree.delete(*self.remote_tree.get_children(parent_node)))
 
         threading.Thread(target=worker, daemon=True).start()

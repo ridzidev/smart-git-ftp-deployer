@@ -5,6 +5,7 @@ from tkinter import ttk
 
 from .theme import (CLR_BORDER, CLR_DANGER, CLR_PRIMARY, CLR_PRIMARY_HOVER,
     CLR_SURFACE, CLR_SURFACE_ALT, CLR_TEXT, CLR_TEXT_MUTED)
+from .ui_dropdown import TombolDropdown
 
 
 NAMA_BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -269,17 +270,15 @@ class DateRangeFilter(ttk.Frame):
         self.on_change = on_change
         self.on_apply = on_apply
         self._rentang = (None, None)   # (dari, sampai) sebagai objek date
-        self._dari_preset = False      # penanda agar combobox tidak ditimpa "Kustom"
+        self._dari_preset = False      # penanda agar dropdown tidak ditimpa "Kustom"
         self._galat_aktif = False      # status galat isian sedang ditampilkan
         self._popup = None
 
         ttk.Label(self, text="Rentang Tanggal:", style="Muted.TLabel").pack(side=tk.LEFT, padx=(0, 6))
 
-        self.var_preset = tk.StringVar(value=DAFTAR_PRESET[0])
-        self.cmb_preset = ttk.Combobox(self, textvariable=self.var_preset,
-                                       values=DAFTAR_PRESET, state="readonly", width=16)
+        self.cmb_preset = TombolDropdown(self, pilihan=DAFTAR_PRESET, nilai=DAFTAR_PRESET[0],
+                                         on_pilih=self._peristiwa_preset, lebar=18)
         self.cmb_preset.pack(side=tk.LEFT, padx=(0, 10))
-        self.cmb_preset.bind("<<ComboboxSelected>>", self._peristiwa_preset)
 
         ttk.Label(self, text="Dari:").pack(side=tk.LEFT, padx=(0, 3))
         self.var_dari = tk.StringVar()
@@ -332,12 +331,12 @@ class DateRangeFilter(ttk.Frame):
 
     def kosongkan(self):
         """Hapus seluruh batas tanggal (kembali menampilkan semua komit)."""
-        self.var_preset.set("Semua Komit")
+        self.cmb_preset.atur("Semua Komit")
         self._peristiwa_preset()
 
     # ---------- Penangan peristiwa ----------
     def _peristiwa_preset(self, event=None):
-        hasil = self._hitung_preset(self.var_preset.get())
+        hasil = self._hitung_preset(self.cmb_preset.get())
         if hasil is None:
             return  # pilihan "Kustom": biarkan isian tetap
         self._dari_preset = True
@@ -399,9 +398,9 @@ class DateRangeFilter(ttk.Frame):
             self.set_status("Semua komit ditampilkan.")
 
         if not aktif:
-            self.var_preset.set("Semua Komit")
-        elif not self._dari_preset and self.var_preset.get() != "Kustom":
-            self.var_preset.set("Kustom")
+            self.cmb_preset.atur("Semua Komit")
+        elif not self._dari_preset and self.cmb_preset.get() != "Kustom":
+            self.cmb_preset.atur("Kustom")
         self._dari_preset = False
 
         if self.on_change:

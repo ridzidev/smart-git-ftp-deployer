@@ -2,6 +2,7 @@
 import threading
 import time
 import tkinter as tk
+from pathlib import Path
 from tkinter import ttk
 
 from .theme import (CLR_BG, CLR_BORDER, CLR_PRIMARY, CLR_PRIMARY_HOVER,
@@ -28,7 +29,7 @@ class App(DeployTabMixin, ExporterTabMixin, BrowserTabMixin, ConfigTabMixin, tk.
         self.active_profile = self.config_store.get("active_profile", "Default")
         self.config_data = self.config_store["profiles"].get(self.active_profile, DEFAULT_CONFIG.copy())
 
-        log_queue.put(f"[INIT] Smart Git-FTP Deployer v{APP_VERSION}")
+        log_queue.put(f"[INFO] Smart Git-FTP Deployer v{APP_VERSION} siap digunakan.")
 
         self.git = None
         self.all_commits = []
@@ -102,11 +103,13 @@ class App(DeployTabMixin, ExporterTabMixin, BrowserTabMixin, ConfigTabMixin, tk.
     def init_git(self):
         try:
             self.git = GitManager(self.config_data.get("LOCAL_DIR", "."))
-            log_queue.put(f"[INIT] Repositori Git aktif: {self.config_data.get('LOCAL_DIR')}")
+            nama_repo = Path(self.config_data.get("LOCAL_DIR", ".")).resolve().name
+            log_queue.put(f"[GIT] Repositori aktif: {nama_repo}")
             self.load_commits_data()
-        except Exception as e:
+        except Exception:
             self.git = None
-            log_queue.put(f"[INIT] Gagal memuat Git: {e}")
+            log_queue.put("[GIT] Repositori Git tidak ditemukan di direktori lokal profil ini. "
+                          "Periksa kolom Direktori Lokal di tab Konfigurasi.")
             if hasattr(self, "commit_tree"):
                 self.commit_tree.delete(*self.commit_tree.get_children())
             if hasattr(self, "export_tree"):
@@ -139,11 +142,11 @@ class App(DeployTabMixin, ExporterTabMixin, BrowserTabMixin, ConfigTabMixin, tk.
             if not silent:
                 log_queue.put(f"[GIT] Data komit diperbarui (Total: {new_count} komit).")
             elif new_count != old_count:
-                log_queue.put(f"[GIT] Terdeteksi komit baru! Total sekarang: {new_count} komit.")
+                log_queue.put(f"[GIT] Komit baru terdeteksi (Total: {new_count}).")
 
-        except Exception as e:
+        except Exception:
             if not silent:
-                log_queue.put(f"[GIT ERROR] Gagal refresh: {e}")
+                log_queue.put("[ERROR] Refresh data komit gagal.")
 
     # ---------- on_window_focus ----------
     def on_window_focus(self, event):

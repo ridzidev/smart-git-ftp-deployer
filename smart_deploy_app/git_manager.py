@@ -19,7 +19,7 @@ class GitManager:
             result = subprocess.run(command, cwd=self.repo_path, capture_output=True, text=True, check=True, encoding="utf-8")
             return int(result.stdout.strip())
         except Exception as e:
-            log_queue.put(f"[GIT ERROR] Gagal menghitung komit: {e}")
+            log_queue.put("[ERROR] Gagal menghitung jumlah komit.")
             return 0
 
     # ---------- get_all_commits_chronological ----------
@@ -45,7 +45,7 @@ class GitManager:
                     idx += 1
             return commits
         except Exception as e:
-            log_queue.put(f"[GIT ERROR] Gagal membaca riwayat kronologis: {e}")
+            log_queue.put("[ERROR] Gagal membaca riwayat commit repositori.")
             return []
 
     # ---------- get_changed_files ----------
@@ -66,7 +66,7 @@ class GitManager:
         try:
             result = subprocess.run(command, cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8")
         except Exception as e:
-            log_queue.put(f"[GIT ERROR] Diff gagal: {e}")
+            log_queue.put("[ERROR] Perhitungan perubahan berkas gagal.")
             return {"added_modified": [], "deleted": []}
 
         files = {"added_modified": [], "deleted": []}

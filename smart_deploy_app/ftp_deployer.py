@@ -27,8 +27,8 @@ class FTPDeployer:
     # ---------- connect ----------
     def connect(self):
         try:
-            proto = "FTPS (TLS)" if self.tls else "FTP"
-            self._log(f"[INFO] Menghubungkan ke {self.host} ({proto})...")
+            proto = "FTPS" if self.tls else "FTP"
+            self._log(f"[INFO] Menghubungkan ke {self.host} via {proto}...")
             if self.tls:
                 self.ftp = ftplib.FTP_TLS(self.host, timeout=30)
                 self.ftp.login(self.user, self.password)
@@ -37,14 +37,14 @@ class FTPDeployer:
                 self.ftp = ftplib.FTP(self.host, timeout=30)
                 self.ftp.login(self.user, self.password)
             self.ftp.set_pasv(True)
-            self._log("[OK] Terhubung (Passive Mode).")
+            self._log("[OK] Terhubung ke server.")
             try:
                 self.ftp.cwd(self.remote_dir_base)
             except Exception:
-                self._log(f"[WARN] Direktori {self.remote_dir_base} tidak ditemukan, tetap di root.")
+                self._log(f"[WARN] Direktori {self.remote_dir_base} tidak ada di server, tetap di root.")
             return True
-        except Exception as e:
-            self._log(f"[ERROR] Koneksi FTP gagal: {e}")
+        except Exception:
+            self._log("[ERROR] Koneksi ke server gagal. Periksa host, user, dan password di tab Konfigurasi.")
             return False
 
     # ---------- disconnect ----------
@@ -97,7 +97,7 @@ class FTPDeployer:
                 self._log(f"[PROGRESS] {percent}%: {local_rel_path}")
                 last_percent = percent
 
-        self._log(f"[UPLOAD] Mengunggah: {local_rel_path} ({filesize / 1024 / 1024:.2f} MB)")
+        self._log(f"[UPLOAD] Menunggah {local_rel_path} ({filesize / 1024 / 1024:.1f} MB)")
         try:
             self.ensure_remote_dir(final_remote_path)
             with open(local_abs, "rb") as f:
@@ -106,8 +106,8 @@ class FTPDeployer:
         except InterruptedError:
             self._log(f"[WARN] Unggah berkas dibatalkan: {local_rel_path}")
             return False
-        except Exception as e:
-            self._log(f"[ERROR] Gagal mengunggah {final_remote_path}: {e}")
+        except Exception:
+            self._log(f"[ERROR] Gagal mengunggah {final_remote_path}.")
             return False
 
     # ---------- delete_file ----------
@@ -119,6 +119,6 @@ class FTPDeployer:
         try:
             self.ftp.delete(final_remote_path)
             return True
-        except Exception as e:
-            self._log(f"[WARN] Gagal menghapus {final_remote_path}: {e}")
+        except Exception:
+            self._log(f"[WARN] Gagal menghapus {final_remote_path}.")
             return False

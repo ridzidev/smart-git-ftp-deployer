@@ -5,7 +5,8 @@ from tkinter import ttk, scrolledtext, messagebox
 from .config import log_queue, resolve_remote_path
 from .ftp_deployer import FTPDeployer
 from .ui_date_filter import DateRangeFilter, tanggal_komit
-from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_ROW_GENAP, CLR_TEXT, FONT_KONSOL, FONT_LABEL, FONT_LABEL_TEBAL
+from .theme import (CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_DANGER, CLR_ROW_GENAP, CLR_SUCCESS,
+                    CLR_TEXT, CLR_WARNING, FONT_KONSOL, FONT_LABEL, FONT_LABEL_TEBAL)
 
 class DeployTabMixin:
 
@@ -21,14 +22,18 @@ class DeployTabMixin:
 
         self.lbl_active_app = ttk.Label(sidebar, text=f"Profil: {self.active_profile}", style="Heading.TLabel")
         self.lbl_active_app.pack(fill=tk.X)
-        self.lbl_commit_stats = ttk.Label(sidebar, text="Total Komit: 0", style="Muted.TLabel")
-        self.lbl_commit_stats.pack(fill=tk.X, pady=(0, 6))
+        r_stat = ttk.Frame(sidebar)
+        r_stat.pack(fill=tk.X, pady=(2, 0))
+        ttk.Label(r_stat, text="Total Komit:", style="Muted.TLabel").pack(side=tk.LEFT)
+        self.lbl_commit_stats = ttk.Label(r_stat, text="0", style="Accent.TLabel")
+        self.lbl_commit_stats.pack(side=tk.LEFT, padx=(6, 0))
 
         ttk.Separator(sidebar).pack(fill=tk.X, pady=6)
 
         # rentang nomor komit
+        ttk.Label(sidebar, text="RENTANG KOMIT", style="Caption.TLabel").pack(anchor="w")
         r_no = ttk.Frame(sidebar)
-        r_no.pack(fill=tk.X)
+        r_no.pack(fill=tk.X, pady=(4, 0))
         ttk.Label(r_no, text="Dari No:").pack(side=tk.LEFT, padx=(0, 3))
         self.ent_dep_start = ttk.Entry(r_no, width=6, font=FONT_LABEL)
         self.ent_dep_start.pack(side=tk.LEFT, padx=(0, 10))
@@ -36,10 +41,12 @@ class DeployTabMixin:
         self.ent_dep_end = ttk.Entry(r_no, width=6, font=FONT_LABEL)
         self.ent_dep_end.pack(side=tk.LEFT)
 
-        ttk.Button(sidebar, text="Pilih Rentang", command=self.apply_deploy_range,
-                   style="Secondary.TButton").pack(fill=tk.X, pady=(10, 0))
-        ttk.Button(sidebar, text="Komit Terbaru", command=self.select_latest_commit,
-                   style="Secondary.TButton").pack(fill=tk.X, pady=(6, 0))
+        r_cepat = ttk.Frame(sidebar)
+        r_cepat.pack(fill=tk.X, pady=(8, 0))
+        ttk.Button(r_cepat, text="Pilih Rentang", command=self.apply_deploy_range,
+                   style="Secondary.TButton").pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        ttk.Button(r_cepat, text="Komit Terbaru", command=self.select_latest_commit,
+                   style="Secondary.TButton").pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # saringan rentang tanggal versi menumpuk
         self.date_filter_deploy = DateRangeFilter(
@@ -53,29 +60,32 @@ class DeployTabMixin:
         ttk.Separator(sidebar).pack(fill=tk.X, pady=10)
 
         # mode eksekusi
+        ttk.Label(sidebar, text="MODE EKSEKUSI", style="Caption.TLabel").pack(anchor="w")
         self.var_consecutive = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             sidebar,
-            text="Mode Bertahap (Per Komit)",
+            text="Bertahap (per komit)",
             variable=self.var_consecutive,
             style="TCheckbutton"
-        ).pack(anchor="w")
+        ).pack(anchor="w", pady=(4, 0))
 
         self.var_fail_fast = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             sidebar,
-            text="Hentikan jika ada galat",
+            text="Berhenti saat ada galat",
             variable=self.var_fail_fast,
             style="TCheckbutton"
         ).pack(anchor="w", pady=(5, 0))
 
         ttk.Separator(sidebar).pack(fill=tk.X, pady=10)
 
-        # filter teks komit
-        ttk.Label(sidebar, text="Filter:", style="Muted.TLabel").pack(anchor="w")
+        # pencarian komit
+        ttk.Label(sidebar, text="CARI KOMIT", style="Caption.TLabel").pack(anchor="w")
         self.ent_search = ttk.Entry(sidebar)
         self.ent_search.pack(fill=tk.X, pady=(4, 0))
         self.ent_search.bind("<KeyRelease>", lambda e: self.filter_deployment_commits())
+        ttk.Label(sidebar, text="Cocokkan hash, pesan, penulis, atau nomor.",
+                  style="Muted.TLabel", wraplength=280, justify=tk.LEFT).pack(anchor="w", pady=(3, 0))
 
         ttk.Separator(sidebar).pack(fill=tk.X, pady=10)
 
@@ -115,11 +125,11 @@ class DeployTabMixin:
         self.commit_tree.heading("author", text="Penulis")
         self.commit_tree.heading("subject", text="Pesan Komit")
 
-        self.commit_tree.column("num", width=60, anchor="center")
-        self.commit_tree.column("hash", width=80, anchor="center")
-        self.commit_tree.column("date", width=140, anchor="center")
-        self.commit_tree.column("author", width=120)
-        self.commit_tree.column("subject", width=300)
+        self.commit_tree.column("num", width=55, anchor="center")
+        self.commit_tree.column("hash", width=90, anchor="center")
+        self.commit_tree.column("date", width=150, anchor="center")
+        self.commit_tree.column("author", width=140)
+        self.commit_tree.column("subject", width=320)
 
         c_scroll = ttk.Scrollbar(tree_box, orient=tk.VERTICAL, command=self.commit_tree.yview)
         self.commit_tree.configure(yscrollcommand=c_scroll.set)
@@ -129,11 +139,13 @@ class DeployTabMixin:
         self.commit_tree.bind("<<TreeviewSelect>>", self.on_commit_tree_select)
         self.commit_tree.tag_configure("genap", background=CLR_ROW_GENAP)
 
-        panel_antrean = ttk.LabelFrame(baris_atas, text=" Berkas dalam Antrean ", padding=6)
+        panel_antrean = ttk.LabelFrame(baris_atas, text=" Antrean Berkas ", padding=6)
         baris_atas.add(panel_antrean, weight=2)
 
-        self.lbl_queue_summary = ttk.Label(panel_antrean, text="Tidak ada komit terpilih.",
-                                           style="Muted.TLabel", wraplength=230, justify=tk.LEFT)
+        self.lbl_queue_summary = ttk.Label(
+            panel_antrean,
+            text="Belum ada komit terpilih. Pilih baris di Riwayat Komit atau isi rentang di sidebar.",
+            style="Muted.TLabel", wraplength=280, justify=tk.LEFT)
         self.lbl_queue_summary.pack(fill=tk.X, pady=(0, 4))
 
         f_tree_box = ttk.Frame(panel_antrean)
@@ -142,8 +154,10 @@ class DeployTabMixin:
         self.file_tree = ttk.Treeview(f_tree_box, columns=("action", "remote"), show="headings")
         self.file_tree.heading("action", text="Aksi")
         self.file_tree.heading("remote", text="Tujuan di Server")
-        self.file_tree.column("action", width=80, anchor="center")
-        self.file_tree.column("remote", width=400)
+        self.file_tree.column("action", width=100, anchor="center")
+        self.file_tree.column("remote", width=420)
+        self.file_tree.tag_configure("aks_unggah", foreground=CLR_SUCCESS)
+        self.file_tree.tag_configure("aks_hapus", foreground="#F472B6")
 
         f_scroll = ttk.Scrollbar(f_tree_box, orient=tk.VERTICAL, command=self.file_tree.yview)
         self.file_tree.configure(yscrollcommand=f_scroll.set)
@@ -157,15 +171,15 @@ class DeployTabMixin:
         prog_bar_box = ttk.Frame(panel_konsol)
         prog_bar_box.pack(fill=tk.X, pady=(0, 4))
 
+        ttk.Button(prog_bar_box, text="Bersihkan", command=self.clear_logs,
+                   style="Secondary.TButton").pack(side=tk.RIGHT)
+
+        self.lbl_progress_status = ttk.Label(prog_bar_box, text="Status: Siap.", font=FONT_LABEL_TEBAL)
+        self.lbl_progress_status.pack(side=tk.RIGHT, padx=(6, 8))
+
         self.progress_bar = ttk.Progressbar(prog_bar_box, orient=tk.HORIZONTAL, mode="determinate",
                                             style="Horizontal.TProgressbar")
         self.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-
-        self.lbl_progress_status = ttk.Label(prog_bar_box, text="Status: Siap", font=FONT_LABEL_TEBAL)
-        self.lbl_progress_status.pack(side=tk.RIGHT, padx=(6, 0))
-
-        ttk.Button(prog_bar_box, text="Bersihkan", command=self.clear_logs,
-                   style="Secondary.TButton").pack(side=tk.RIGHT)
 
         self.log_text = scrolledtext.ScrolledText(
             panel_konsol,
@@ -293,7 +307,8 @@ class DeployTabMixin:
         self.file_tree.delete(*self.file_tree.get_children())
 
         if not selected_commits:
-            self.lbl_queue_summary.config(text="Tidak ada komit terpilih.")
+            self.lbl_queue_summary.config(
+                text="Belum ada komit terpilih. Pilih baris di Riwayat Komit atau isi rentang di sidebar.")
             self.btn_start_deploy.config(state=tk.DISABLED)
             return
 
@@ -311,15 +326,21 @@ class DeployTabMixin:
             first_num = selected_commits[0]["index"]
             last_num = selected_commits[-1]["index"]
             count = len(selected_commits)
-            summary_txt = f"Rentang: #{first_num} s/d #{last_num} ({count} komit) | Total Operasi: {total_up + total_del} berkas ({total_up} upload, {total_del} delete)"
+            summary_txt = (f"{count} komit terpilih: #{first_num} s/d #{last_num}.\n"
+                           f"{total_up} unggah, {total_del} hapus, total {total_up + total_del} operasi berkas.")
             self.lbl_queue_summary.config(text=summary_txt)
 
+            atur = 0
             for c in selected_commits:
                 diff = self.git.get_changed_files(c["hash"], c["hash"], exclude)
                 for f in diff["added_modified"]:
-                    self.file_tree.insert("", "end", values=(f"UP (#{c['index']})", resolve_remote_path(f, maps)))
+                    self.file_tree.insert("", "end", values=(f"UP (#{c['index']})", resolve_remote_path(f, maps)),
+                                          tags=(("genap",) if atur % 2 == 0 else ()) + ("aks_unggah",))
+                    atur += 1
                 for f in diff["deleted"]:
-                    self.file_tree.insert("", "end", values=(f"DEL (#{c['index']})", resolve_remote_path(f, maps)))
+                    self.file_tree.insert("", "end", values=(f"DEL (#{c['index']})", resolve_remote_path(f, maps)),
+                                          tags=(("genap",) if atur % 2 == 0 else ()) + ("aks_hapus",))
+                    atur += 1
 
             self.btn_start_deploy.config(state=tk.NORMAL if (total_up + total_del) > 0 else tk.DISABLED)
 
@@ -328,13 +349,19 @@ class DeployTabMixin:
             newer = selected_commits[-1]["hash"]
             diff = self.git.get_changed_files(older, newer, exclude)
 
+            atur = 0
             for f in diff["added_modified"]:
-                self.file_tree.insert("", "end", values=("UPLOAD", resolve_remote_path(f, maps)))
+                self.file_tree.insert("", "end", values=("UPLOAD", resolve_remote_path(f, maps)),
+                                      tags=(("genap",) if atur % 2 == 0 else ()) + ("aks_unggah",))
+                atur += 1
             for f in diff["deleted"]:
-                self.file_tree.insert("", "end", values=("DELETE", resolve_remote_path(f, maps)))
+                self.file_tree.insert("", "end", values=("DELETE", resolve_remote_path(f, maps)),
+                                      tags=(("genap",) if atur % 2 == 0 else ()) + ("aks_hapus",))
+                atur += 1
 
             total_items = len(diff["added_modified"]) + len(diff["deleted"])
-            summary_txt = f"Mode Akumulatif: {total_items} berkas berbeda antara #{selected_commits[0]['index']} dan #{selected_commits[-1]['index']}."
+            summary_txt = (f"Mode akumulatif: {total_items} berkas berbeda antara "
+                           f"#{selected_commits[0]['index']} dan #{selected_commits[-1]['index']}.")
             self.lbl_queue_summary.config(text=summary_txt)
             self.btn_start_deploy.config(state=tk.NORMAL if total_items > 0 else tk.DISABLED)
 
@@ -357,7 +384,7 @@ class DeployTabMixin:
         self.btn_start_deploy.config(state=tk.DISABLED)
         self.btn_abort.config(state=tk.NORMAL)
         self.progress_bar["value"] = 0
-        self.lbl_progress_status.config(text="Status: Memulai koneksi FTP...")
+        self._set_status("Status: Menyiapkan koneksi FTP...")
 
         threading.Thread(target=self.worker_deploy_thread, args=(selected_commits, consecutive), daemon=True).start()
 
@@ -366,7 +393,7 @@ class DeployTabMixin:
         if self.is_deploying:
             self.abort_deploy_event.set()
             log_queue.put("[WARN] Permintaan pembatalan diterima, menunggu proses berhenti...")
-            self.lbl_progress_status.config(text="Status: Membatalkan...")
+            self._set_status("Status: Membatalkan...")
             self.btn_abort.config(state=tk.DISABLED)
 
     # ---------- worker_deploy_thread ----------
@@ -465,20 +492,34 @@ class DeployTabMixin:
         deployer.disconnect()
 
         if self.abort_deploy_event.is_set():
-            self._finalize_deploy_ui(False, "Dibatalkan oleh pengguna.")
+            self._finalize_deploy_ui(False, "Dibatalkan.")
         elif success_all:
             log_queue.put("[SUCCESS] Seluruh rentang komit berhasil di-deploy tanpa kesalahan.")
-            self._finalize_deploy_ui(True, "Selesai Berhasil.")
+            self._finalize_deploy_ui(True, "Selesai, berhasil.")
         else:
             log_queue.put("[ERROR] Deployment selesai dengan beberapa kesalahan.")
-            self._finalize_deploy_ui(False, "Selesai dengan Galat.")
+            self._finalize_deploy_ui(False, "Selesai, ada galat. Periksa konsol.")
+
+    # ---------- _set_status ----------
+    def _set_status(self, teks):
+        """Tampilkan status eksekusi dengan warna sesuai keadaannya."""
+        rendah = teks.lower()
+        if "berhasil" in rendah:
+            warna = CLR_SUCCESS
+        elif "galat" in rendah or "gagal" in rendah:
+            warna = CLR_DANGER
+        elif "batalkan" in rendah or "dibatalkan" in rendah:
+            warna = CLR_WARNING
+        else:
+            warna = CLR_TEXT
+        self.lbl_progress_status.config(text=teks, foreground=warna)
 
     # ---------- _update_progress_ui ----------
     def _update_progress_ui(self, current, total):
         pct = int((current / total) * 100) if total > 0 else 100
         def _update():
             self.progress_bar["value"] = pct
-            self.lbl_progress_status.config(text=f"Progres: {current}/{total} berkas ({pct}%)")
+            self._set_status(f"Progres: {current}/{total} berkas ({pct}%)")
         self.after(0, _update)
 
     # ---------- _finalize_deploy_ui ----------
@@ -487,5 +528,5 @@ class DeployTabMixin:
             self.is_deploying = False
             self.btn_abort.config(state=tk.DISABLED)
             self.btn_start_deploy.config(state=tk.NORMAL)
-            self.lbl_progress_status.config(text=f"Status: {status_msg}")
+            self._set_status(f"Status: {status_msg}")
         self.after(0, _cleanup)

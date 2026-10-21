@@ -5,9 +5,9 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
 
-from .theme import (CLR_BG, CLR_BORDER, CLR_PRIMARY, CLR_PRIMARY_HOVER,
+from .theme import (CLR_ACCENT, CLR_ACCENT_SOFT, CLR_BG, CLR_BORDER, CLR_PRIMARY, CLR_PRIMARY_HOVER,
     CLR_SUCCESS, CLR_DANGER, CLR_SURFACE, CLR_SURFACE_ALT, CLR_TEXT, CLR_TEXT_MUTED,
-    FONT_JUDUL, FONT_LABEL, FONT_LABEL_TEBAL)
+    FONT_JUDUL, FONT_LABEL, FONT_LABEL_TEBAL, FONT_MINI_TEBAL)
 
 from .config import APP_VERSION, DEFAULT_CONFIG, load_config_store, log_queue
 from .git_manager import GitManager
@@ -94,6 +94,8 @@ class App(DeployTabMixin, ExporterTabMixin, BrowserTabMixin, ConfigTabMixin,
         self.style.configure("Surface.TFrame", background=CLR_SURFACE)
         self.style.configure("TLabel", background=CLR_BG, foreground=CLR_TEXT, font=FONT_LABEL)
         self.style.configure("Muted.TLabel", background=CLR_BG, foreground=CLR_TEXT_MUTED, font=FONT_LABEL)
+        self.style.configure("Caption.TLabel", background=CLR_BG, foreground=CLR_ACCENT, font=FONT_MINI_TEBAL)
+        self.style.configure("Accent.TLabel", background=CLR_BG, foreground=CLR_ACCENT_SOFT, font=FONT_LABEL_TEBAL)
         self.style.configure("Heading.TLabel", background=CLR_BG, foreground=CLR_TEXT, font=FONT_JUDUL)
 
         self.style.configure("TNotebook", background=CLR_BG, borderwidth=0)
@@ -190,7 +192,7 @@ class App(DeployTabMixin, ExporterTabMixin, BrowserTabMixin, ConfigTabMixin,
             new_count = len(self.all_commits)
 
             if hasattr(self, "lbl_commit_stats"):
-                self.lbl_commit_stats.config(text=f"Total Komit: {new_count}")
+                self.lbl_commit_stats.config(text=f"{new_count}")
 
             if hasattr(self, "commit_tree"):
                 self.filter_deployment_commits()
@@ -227,7 +229,7 @@ class App(DeployTabMixin, ExporterTabMixin, BrowserTabMixin, ConfigTabMixin,
         total = len(self.all_commits)
 
         if hasattr(self, "lbl_commit_stats"):
-            self.lbl_commit_stats.config(text=f"Total Komit: {total}")
+            self.lbl_commit_stats.config(text=f"{total}")
 
         if hasattr(self, "commit_tree"):
             self.filter_deployment_commits()

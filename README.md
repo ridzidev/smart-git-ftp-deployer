@@ -6,9 +6,9 @@ Aplikasi desktop berbasis Python dan Tkinter untuk melakukan deploy proyek Git k
 
 Aplikasi ini cocok dipakai di shared hosting (cPanel atau DirectAdmin) yang tidak menyediakan akses SSH. Dengan begitu, alur deploy berbasis commit tetap bisa berjalan seperti biasa.
 
-Versi 2.6
+Versi 2.7
 
-![Tampilan utama Deployment Engine](screenshoot1.png)
+![Tampilan utama Deployment Engine](Screenshot-V2.png)
 
 ## Fitur
 
@@ -145,7 +145,7 @@ Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 |---|---|
 | Deployment Engine | Pemilihan commit, saring tanggal, tinjauan antrean berkas, eksekusi, dan log |
 | Ekspor SQL | Menyusun riwayat commit menjadi pernyataan SQL |
-| Peramban Berkas | Menjelajahi direktori lokal dan server |
+| Peramban Berkas | Menjelajah serta mengunggah dan mengunduh berkas antara lokal dan server |
 | Konfigurasi | Pengelolaan profil, parameter server, dan pemetaan jalur |
 
 ## Kontribusi
@@ -153,6 +153,14 @@ Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 Kontribusi berupa laporan galat, usulan fitur, atau pull request diterima dengan terbuka. Untuk perubahan besar, buka issue terlebih dahulu agar bisa didiskusikan sebelum diterapkan.
 
 ## Changelog
+
+### v2.7 (21 Oktober 2026)
+
+- Tab Peramban Berkas dibangun ulang menyerupai pengelola berkas FTP: daftar datar berkolom Nama, Ukuran, dan Diubah, ikon folder dan berkas, bilah alamat per panel, tombol Naik, Root, dan Muat, baris `..` untuk naik folder, serta sortir dengan klik kepala kolom.
+- Operasi berkas kini bisa dijalankan langsung dari peramban: Unggah dan Unduh untuk banyak pilihan sekaligus (folder diambil seluruh isinya), Buat Folder, Ubah Nama, dan Hapus berlapis. Tersedia menu klik kanan, dobel klik untuk pindah folder atau transfer, bar progres, serta konfirmasi sebelum hapus dan timpa.
+- Panel lokal menampilkan status Git berwarna: hijau untuk berkas baru, kuning untuk yang berubah, dan coret merah untuk yang masuk daftar pengecualian deploy.
+- Saklar sinkron navigasi membuka folder padanan di server saat panel lokal berpindah folder, dan opsi tampilkan berkas tersembunyi berlaku untuk kedua panel.
+- Deployment Engine dan Ekspor SQL diperapai: aksen warna pada tajuk dan status, baris antrean diwarnai menurut aksi, serta pratinjau SQL tersorot sintaks.
 
 ### v2.6 (21 Oktober 2026)
 

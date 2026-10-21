@@ -11,6 +11,20 @@ FON_VERSI = (NAMA_FONT, 12, "bold")
 FON_TAUTAN = (NAMA_FONT, 9, "underline")
 
 RIWAYAT_VERSI = [
+    ("v2.7", "21 Oktober 2026", [
+        "Tab Peramban Berkas dibangun ulang menyerupai pengelola berkas FTP: daftar datar berkolom "
+        "Nama, Ukuran, dan Diubah dengan ikon, bilah alamat per panel, tombol Naik dan Root, baris "
+        "naik folder, serta sortir lewat klik kepala kolom.",
+        "Operasi berkas langsung dari peramban: unggah dan unduh untuk banyak pilihan sekaligus, "
+        "buat folder, ubah nama, dan hapus berlapis. Menu klik kanan dan dobel klik tersedia, "
+        "lengkap bar progres serta konfirmasi sebelum hapus atau timpa.",
+        "Panel lokal mewarnai status Git: hijau berkas baru, kuning berkas berubah, dan coret merah "
+        "untuk berkas yang akan dilewati saat deploy.",
+        "Saklar sinkron navigasi membuka folder padanan di server, dan opsi tampilkan berkas "
+        "tersembunyi berlaku untuk kedua panel.",
+        "Deployment Engine dan Ekspor SQL diperapai: aksen warna pada tajuk dan status, baris "
+        "antrean diwarnai menurut aksi, serta penyorotan sintaks pada pratinjau SQL.",
+    ]),
     ("v2.6", "21 Oktober 2026", [
         "Layar pembuka singkat dengan identitas aplikasi, ditambah tab Panduan dan tab Perubahan.",
         "Tab Deployment Engine dan Ekspor SQL disusun ulang: seluruh kendali dipindah ke satu sidebar di kiri, daftar komit menempati area utama, dan area hasil melebar di bawahnya.",

@@ -2,7 +2,7 @@
 import time
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
-from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_ROW_GENAP, CLR_TEXT, FONT_KONSOL, FONT_LABEL_TEBAL
+from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_ROW_GENAP, CLR_TEXT, CLR_TEXT_MUTED, CLR_WARNING, FONT_KONSOL, FONT_LABEL, FONT_LABEL_TEBAL
 from .ui_date_filter import DateRangeFilter, tanggal_komit
 
 class ExporterTabMixin:
@@ -19,33 +19,36 @@ class ExporterTabMixin:
 
         self.lbl_export_profile = ttk.Label(sidebar, text=f"Profil: {self.active_profile}", style="Heading.TLabel")
         self.lbl_export_profile.pack(fill=tk.X)
-        self.lbl_real_total = ttk.Label(sidebar, text="Total Komit: 0", font=FONT_LABEL_TEBAL)
-        self.lbl_real_total.pack(fill=tk.X, pady=(0, 6))
+        r_stat = ttk.Frame(sidebar)
+        r_stat.pack(fill=tk.X, pady=(2, 0))
+        ttk.Label(r_stat, text="Total Komit:", style="Muted.TLabel").pack(side=tk.LEFT)
+        self.lbl_real_total = ttk.Label(r_stat, text="0", style="Accent.TLabel")
+        self.lbl_real_total.pack(side=tk.LEFT, padx=(6, 0))
 
         ttk.Separator(sidebar).pack(fill=tk.X, pady=6)
 
         # parameter tujuan SQL
-        ttk.Label(sidebar, text="Parameter SQL", style="Muted.TLabel").pack(anchor="w")
+        ttk.Label(sidebar, text="PARAMETER SQL", style="Caption.TLabel").pack(anchor="w")
         r_param = ttk.Frame(sidebar)
         r_param.pack(fill=tk.X, pady=(4, 0))
         ttk.Label(r_param, text="App ID:").pack(side=tk.LEFT, padx=(0, 4))
-        self.ent_sql_appid = ttk.Entry(r_param, width=5)
+        self.ent_sql_appid = ttk.Entry(r_param, width=5, font=FONT_LABEL)
         self.ent_sql_appid.insert(0, "1")
         self.ent_sql_appid.pack(side=tk.LEFT, padx=(0, 12))
         ttk.Label(r_param, text="Branch:").pack(side=tk.LEFT, padx=(0, 4))
-        self.ent_sql_branch = ttk.Entry(r_param, width=9)
+        self.ent_sql_branch = ttk.Entry(r_param, width=9, font=FONT_LABEL)
         self.ent_sql_branch.insert(0, "main")
         self.ent_sql_branch.pack(side=tk.LEFT)
 
         # rentang nomor komit
-        ttk.Label(sidebar, text="Rentang Nomor", style="Muted.TLabel").pack(anchor="w", pady=(10, 0))
+        ttk.Label(sidebar, text="RENTANG NOMOR", style="Caption.TLabel").pack(anchor="w", pady=(10, 0))
         r_no = ttk.Frame(sidebar)
         r_no.pack(fill=tk.X, pady=(4, 0))
         ttk.Label(r_no, text="Dari No:").pack(side=tk.LEFT, padx=(0, 3))
-        self.ent_range_start = ttk.Entry(r_no, width=6)
+        self.ent_range_start = ttk.Entry(r_no, width=6, font=FONT_LABEL)
         self.ent_range_start.pack(side=tk.LEFT, padx=(0, 10))
         ttk.Label(r_no, text="Sampai No:").pack(side=tk.LEFT, padx=(0, 3))
-        self.ent_range_end = ttk.Entry(r_no, width=6)
+        self.ent_range_end = ttk.Entry(r_no, width=6, font=FONT_LABEL)
         self.ent_range_end.pack(side=tk.LEFT)
 
         r_preset = ttk.Frame(sidebar)
@@ -83,7 +86,7 @@ class ExporterTabMixin:
         paned_kanan = ttk.PanedWindow(paned_tiang, orient=tk.VERTICAL)
         paned_tiang.add(paned_kanan, weight=1)
 
-        tbl_frame = ttk.LabelFrame(paned_kanan, text=" Urutan Kronologis (#1 = Komit Pertama) ", padding=4)
+        tbl_frame = ttk.LabelFrame(paned_kanan, text=" Riwayat Komit (Kronologis) ", padding=4)
         paned_kanan.add(tbl_frame, weight=6)
 
         tbl_wrapper = ttk.Frame(tbl_frame)
@@ -101,11 +104,11 @@ class ExporterTabMixin:
         self.export_tree.heading("author", text="Penulis")
         self.export_tree.heading("msg", text="Pesan Komit")
 
-        self.export_tree.column("num", width=60, anchor="center")
-        self.export_tree.column("hash", width=85, anchor="center")
-        self.export_tree.column("date", width=140, anchor="center")
-        self.export_tree.column("author", width=130)
-        self.export_tree.column("msg", width=500)
+        self.export_tree.column("num", width=55, anchor="center")
+        self.export_tree.column("hash", width=90, anchor="center")
+        self.export_tree.column("date", width=150, anchor="center")
+        self.export_tree.column("author", width=140)
+        self.export_tree.column("msg", width=320)
 
         exp_scroll = ttk.Scrollbar(tbl_wrapper, orient=tk.VERTICAL, command=self.export_tree.yview)
         self.export_tree.configure(yscrollcommand=exp_scroll.set)
@@ -127,10 +130,16 @@ class ExporterTabMixin:
         )
         self.txt_sql_preview.pack(fill=tk.BOTH, expand=True)
 
+        # penyorotan sintaks pratinjau SQL
+        self.txt_sql_preview.tag_config("angka", foreground="#A78BFA")
+        self.txt_sql_preview.tag_config("kunci", foreground="#60A5FA")
+        self.txt_sql_preview.tag_config("string", foreground=CLR_WARNING)
+        self.txt_sql_preview.tag_config("komentar", foreground=CLR_TEXT_MUTED)
+
     # ---------- load_all_commits_for_exporter ----------
     def load_all_commits_for_exporter(self):
         total = len(self.all_commits)
-        self.lbl_real_total.config(text=f"Total Komit: {total}")
+        self.lbl_real_total.config(text=f"{total}")
         self.filter_exporter_commits()
 
         self.ent_range_start.delete(0, tk.END)
@@ -138,7 +147,8 @@ class ExporterTabMixin:
         self.ent_range_end.delete(0, tk.END)
         self.ent_range_end.insert(0, str(total))
 
-        self.lbl_export_status.config(text=f"Memuat {total} komit. Tentukan rentang indeks untuk ekspor.")
+        self.lbl_export_status.config(
+            text=f"{total} komit termuat. Tentukan rentang lalu tekan Terapkan Rentang.")
         self.generate_sql_query(1, total)
 
     # ---------- filter_exporter_commits ----------
@@ -229,7 +239,8 @@ class ExporterTabMixin:
             self.export_tree.see(ada[0])
 
         count = (end_no - start_no) + 1
-        self.lbl_export_status.config(text=f"Memilih {count} komit (#{start_no} s/d #{end_no}).")
+        self.lbl_export_status.config(
+            text=f"Terpilih {count} komit (#{start_no} s/d #{end_no}). Query SQL diperbarui.")
         self.generate_sql_query(start_no, end_no)
 
     # ---------- generate_sql_query ----------
@@ -264,7 +275,28 @@ class ExporterTabMixin:
 
         self.txt_sql_preview.delete("1.0", tk.END)
         self.txt_sql_preview.insert(tk.END, sql_content)
+        self._sorot_sql()
         return sql_content
+
+    # ---------- _sorot_sql ----------
+    def _sorot_sql(self):
+        """Warnai komentar, string, kata kunci, dan angka pada pratinjau SQL."""
+        kanvas = self.txt_sql_preview
+        pola_tag = (
+            (r"'[^']*'", "string"),
+            (r"\y(INSERT|IGNORE|INTO|VALUES)\y", "kunci"),
+            (r"\y\d+\y", "angka"),
+            (r"--[^\n]*", "komentar"),
+        )
+        for pola, tag in pola_tag:
+            mulai = "1.0"
+            while True:
+                hitung = tk.IntVar()
+                pos = kanvas.search(pola, mulai, stopindex="end", regexp=True, count=hitung)
+                if not pos:
+                    break
+                kanvas.tag_add(tag, pos, f"{pos}+{hitung.get()}c")
+                mulai = f"{pos}+{hitung.get()}c"
 
     # ---------- copy_sql_to_clipboard ----------
     def copy_sql_to_clipboard(self):

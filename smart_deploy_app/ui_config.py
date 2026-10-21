@@ -2,7 +2,7 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 from .config import DEFAULT_CONFIG, save_config_store, log_queue
-from .theme import CLR_BG
+from .theme import CLR_BG, FONT_LABEL
 from .ui_dropdown import TombolDropdown
 
 class ConfigTabMixin:
@@ -43,7 +43,7 @@ class ConfigTabMixin:
         self.cfg_ents = {}
         for i, (label_text, key) in enumerate(fields):
             ttk.Label(form_frame, text=label_text).grid(row=i, column=0, sticky="w", pady=4, padx=(0, 10))
-            entry = ttk.Entry(form_frame, font=("Segoe UI", 9))
+            entry = ttk.Entry(form_frame, font=FONT_LABEL)
             if "Password" in label_text:
                 entry.config(show="*")
             entry.insert(0, self.config_data.get(key, ""))
@@ -110,6 +110,9 @@ class ConfigTabMixin:
 
         self.init_git()
         self.refresh_local_root()
+
+        if hasattr(self, "perbarui_bilah_status"):
+            self.perbarui_bilah_status()
 
         if self.browser_ftp:
             try:

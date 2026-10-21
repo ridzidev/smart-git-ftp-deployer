@@ -5,93 +5,102 @@ from tkinter import ttk, scrolledtext, messagebox
 from .config import log_queue, resolve_remote_path
 from .ftp_deployer import FTPDeployer
 from .ui_date_filter import DateRangeFilter, tanggal_komit
-from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_TEXT
+from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_ROW_GENAP, CLR_TEXT, FONT_KONSOL, FONT_LABEL, FONT_LABEL_TEBAL
 
 class DeployTabMixin:
 
     # ---------- setup_deploy_tab ----------
     def setup_deploy_tab(self):
-        main_paned = ttk.PanedWindow(self.tab_deploy, orient=tk.VERTICAL)
-        main_paned.pack(fill=tk.BOTH, expand=True, padx=4, pady=4)
+        paned_tiang = ttk.PanedWindow(self.tab_deploy, orient=tk.HORIZONTAL)
+        paned_tiang.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
 
-        top_split = ttk.PanedWindow(main_paned, orient=tk.HORIZONTAL)
-        main_paned.add(top_split, weight=3)
+        # ----- kolom kiri: seluruh kendali di satu sidebar -----
+        sidebar = ttk.Frame(paned_tiang, padding=(10, 8, 8, 8), width=310)
+        sidebar.pack_propagate(False)
+        paned_tiang.add(sidebar, weight=0)
 
-        left_frame = ttk.Frame(top_split)
-        top_split.add(left_frame, weight=3)
+        self.lbl_active_app = ttk.Label(sidebar, text=f"Profil: {self.active_profile}", style="Heading.TLabel")
+        self.lbl_active_app.pack(fill=tk.X)
+        self.lbl_commit_stats = ttk.Label(sidebar, text="Total Komit: 0", style="Muted.TLabel")
+        self.lbl_commit_stats.pack(fill=tk.X, pady=(0, 6))
 
-        ctrl_box = ttk.LabelFrame(left_frame, text=" Kontrol Deployment ", padding=8)
-        ctrl_box.pack(fill=tk.X, pady=(0, 6))
+        ttk.Separator(sidebar).pack(fill=tk.X, pady=6)
 
-        r1 = ttk.Frame(ctrl_box)
-        r1.pack(fill=tk.X, pady=2)
+        # rentang nomor komit
+        r_no = ttk.Frame(sidebar)
+        r_no.pack(fill=tk.X)
+        ttk.Label(r_no, text="Dari No:").pack(side=tk.LEFT, padx=(0, 3))
+        self.ent_dep_start = ttk.Entry(r_no, width=6, font=FONT_LABEL)
+        self.ent_dep_start.pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Label(r_no, text="Sampai No:").pack(side=tk.LEFT, padx=(0, 3))
+        self.ent_dep_end = ttk.Entry(r_no, width=6, font=FONT_LABEL)
+        self.ent_dep_end.pack(side=tk.LEFT)
 
-        self.lbl_active_app = ttk.Label(r1, text=f"Profil: {self.active_profile}", style="Heading.TLabel")
-        self.lbl_active_app.pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Button(sidebar, text="Pilih Rentang", command=self.apply_deploy_range,
+                   style="Secondary.TButton").pack(fill=tk.X, pady=(10, 0))
+        ttk.Button(sidebar, text="Komit Terbaru", command=self.select_latest_commit,
+                   style="Secondary.TButton").pack(fill=tk.X, pady=(6, 0))
 
-        self.lbl_commit_stats = ttk.Label(r1, text="Total Komit: 0", style="Muted.TLabel")
-        self.lbl_commit_stats.pack(side=tk.LEFT, padx=(0, 12))
+        # saringan rentang tanggal versi menumpuk
+        self.date_filter_deploy = DateRangeFilter(
+            sidebar,
+            on_change=self.filter_deployment_commits,
+            on_apply=self.apply_date_range_deploy,
+            menumpuk=True
+        )
+        self.date_filter_deploy.pack(fill=tk.X, pady=(12, 0))
 
-        ttk.Label(r1, text="Dari No:").pack(side=tk.LEFT, padx=(0, 3))
-        self.ent_dep_start = ttk.Entry(r1, width=6, font=("Segoe UI", 9))
-        self.ent_dep_start.pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Separator(sidebar).pack(fill=tk.X, pady=10)
 
-        ttk.Label(r1, text="Sampai No:").pack(side=tk.LEFT, padx=(0, 3))
-        self.ent_dep_end = ttk.Entry(r1, width=6, font=("Segoe UI", 9))
-        self.ent_dep_end.pack(side=tk.LEFT, padx=(0, 8))
-
-        ttk.Button(r1, text="Pilih Rentang", command=self.apply_deploy_range, style="Secondary.TButton").pack(side=tk.LEFT, padx=2)
-        ttk.Button(r1, text="Komit Terbaru", command=self.select_latest_commit, style="Secondary.TButton").pack(side=tk.LEFT, padx=2)
-        
-        # Tombol Refresh yang jelas dan mencolok
-        self.btn_refresh = ttk.Button(r1, text="Muat Ulang (F5)", command=self.refresh_git_data, style="Secondary.TButton")
-        self.btn_refresh.pack(side=tk.LEFT, padx=2)
-
-        r2 = ttk.Frame(ctrl_box)
-        r2.pack(fill=tk.X, pady=(6, 2))
-
+        # mode eksekusi
         self.var_consecutive = tk.BooleanVar(value=True)
-        chk_consec = ttk.Checkbutton(
-            r2,
+        ttk.Checkbutton(
+            sidebar,
             text="Mode Bertahap (Per Komit)",
             variable=self.var_consecutive,
             style="TCheckbutton"
-        )
-        chk_consec.pack(side=tk.LEFT)
+        ).pack(anchor="w")
 
         self.var_fail_fast = tk.BooleanVar(value=True)
-        chk_fail = ttk.Checkbutton(
-            r2,
+        ttk.Checkbutton(
+            sidebar,
             text="Hentikan jika ada galat",
             variable=self.var_fail_fast,
             style="TCheckbutton"
-        )
-        chk_fail.pack(side=tk.LEFT, padx=12)
+        ).pack(anchor="w", pady=(5, 0))
 
-        self.btn_abort = ttk.Button(r2, text="Batalkan", command=self.abort_deployment, state=tk.DISABLED, style="Danger.TButton")
-        self.btn_abort.pack(side=tk.RIGHT, padx=2)
+        ttk.Separator(sidebar).pack(fill=tk.X, pady=10)
 
-        self.btn_start_deploy = ttk.Button(r2, text="Mulai Deployment", command=self.start_deploy, state=tk.DISABLED, style="Primary.TButton")
-        self.btn_start_deploy.pack(side=tk.RIGHT, padx=4)
-
-        date_box = ttk.Frame(left_frame)
-        date_box.pack(fill=tk.X, pady=(0, 4))
-
-        self.date_filter_deploy = DateRangeFilter(
-            date_box,
-            on_change=self.filter_deployment_commits,
-            on_apply=self.apply_date_range_deploy,
-        )
-        self.date_filter_deploy.pack(fill=tk.X)
-
-        search_box = ttk.Frame(left_frame)
-        search_box.pack(fill=tk.X, pady=(0, 4))
-        ttk.Label(search_box, text="Filter:").pack(side=tk.LEFT, padx=(0, 4))
-        self.ent_search = ttk.Entry(search_box)
-        self.ent_search.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        # filter teks komit
+        ttk.Label(sidebar, text="Filter:", style="Muted.TLabel").pack(anchor="w")
+        self.ent_search = ttk.Entry(sidebar)
+        self.ent_search.pack(fill=tk.X, pady=(4, 0))
         self.ent_search.bind("<KeyRelease>", lambda e: self.filter_deployment_commits())
 
-        tree_box = ttk.Frame(left_frame)
+        ttk.Separator(sidebar).pack(fill=tk.X, pady=10)
+
+        # tombol utama
+        self.btn_start_deploy = ttk.Button(sidebar, text="Mulai Deployment", command=self.start_deploy,
+                                           state=tk.DISABLED, style="Primary.TButton")
+        self.btn_start_deploy.pack(fill=tk.X, ipady=7)
+        self.btn_abort = ttk.Button(sidebar, text="Batalkan", command=self.abort_deployment,
+                                    state=tk.DISABLED, style="Danger.TButton")
+        self.btn_abort.pack(fill=tk.X, pady=(6, 0), ipady=5)
+        self.btn_refresh = ttk.Button(sidebar, text="Muat Ulang (F5)", command=self.refresh_git_data,
+                                      style="Secondary.TButton")
+        self.btn_refresh.pack(fill=tk.X, pady=(12, 0))
+
+        # ----- kolom kanan: tabel + antrean di atas, konsol melintang di bawah -----
+        paned_kanan = ttk.PanedWindow(paned_tiang, orient=tk.VERTICAL)
+        paned_tiang.add(paned_kanan, weight=1)
+
+        baris_atas = ttk.PanedWindow(paned_kanan, orient=tk.HORIZONTAL)
+        paned_kanan.add(baris_atas, weight=6)
+
+        panel_komit = ttk.LabelFrame(baris_atas, text=" Riwayat Komit ", padding=6)
+        baris_atas.add(panel_komit, weight=3)
+
+        tree_box = ttk.Frame(panel_komit)
         tree_box.pack(fill=tk.BOTH, expand=True)
 
         self.commit_tree = ttk.Treeview(
@@ -118,21 +127,23 @@ class DeployTabMixin:
         self.commit_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         c_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.commit_tree.bind("<<TreeviewSelect>>", self.on_commit_tree_select)
+        self.commit_tree.tag_configure("genap", background=CLR_ROW_GENAP)
 
-        right_frame = ttk.LabelFrame(top_split, text=" Berkas dalam Antrean ", padding=6)
-        top_split.add(right_frame, weight=2)
+        panel_antrean = ttk.LabelFrame(baris_atas, text=" Berkas dalam Antrean ", padding=6)
+        baris_atas.add(panel_antrean, weight=2)
 
-        self.lbl_queue_summary = ttk.Label(right_frame, text="Tidak ada komit terpilih.", style="Muted.TLabel")
+        self.lbl_queue_summary = ttk.Label(panel_antrean, text="Tidak ada komit terpilih.",
+                                           style="Muted.TLabel", wraplength=230, justify=tk.LEFT)
         self.lbl_queue_summary.pack(fill=tk.X, pady=(0, 4))
 
-        f_tree_box = ttk.Frame(right_frame)
+        f_tree_box = ttk.Frame(panel_antrean)
         f_tree_box.pack(fill=tk.BOTH, expand=True)
 
         self.file_tree = ttk.Treeview(f_tree_box, columns=("action", "remote"), show="headings")
         self.file_tree.heading("action", text="Aksi")
         self.file_tree.heading("remote", text="Tujuan di Server")
-        self.file_tree.column("action", width=75, anchor="center")
-        self.file_tree.column("remote", width=360)
+        self.file_tree.column("action", width=80, anchor="center")
+        self.file_tree.column("remote", width=400)
 
         f_scroll = ttk.Scrollbar(f_tree_box, orient=tk.VERTICAL, command=self.file_tree.yview)
         self.file_tree.configure(yscrollcommand=f_scroll.set)
@@ -140,26 +151,26 @@ class DeployTabMixin:
         self.file_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         f_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-        bottom_frame = ttk.LabelFrame(main_paned, text=" Konsol Eksekusi & Status ", padding=6)
-        main_paned.add(bottom_frame, weight=1)
+        panel_konsol = ttk.LabelFrame(paned_kanan, text=" Konsol Eksekusi ", padding=6)
+        paned_kanan.add(panel_konsol, weight=4)
 
-        prog_bar_box = ttk.Frame(bottom_frame)
+        prog_bar_box = ttk.Frame(panel_konsol)
         prog_bar_box.pack(fill=tk.X, pady=(0, 4))
 
-        self.progress_bar = ttk.Progressbar(prog_bar_box, orient=tk.HORIZONTAL, mode="determinate", style="Horizontal.TProgressbar")
+        self.progress_bar = ttk.Progressbar(prog_bar_box, orient=tk.HORIZONTAL, mode="determinate",
+                                            style="Horizontal.TProgressbar")
         self.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
 
-        self.lbl_progress_status = ttk.Label(prog_bar_box, text="Status: Siap", font=("Segoe UI Bold", 9))
-        self.lbl_progress_status.pack(side=tk.RIGHT)
+        self.lbl_progress_status = ttk.Label(prog_bar_box, text="Status: Siap", font=FONT_LABEL_TEBAL)
+        self.lbl_progress_status.pack(side=tk.RIGHT, padx=(6, 0))
 
-        log_head = ttk.Frame(bottom_frame)
-        log_head.pack(fill=tk.X, pady=(2, 2))
-        ttk.Button(log_head, text="Bersihkan Konsol", command=self.clear_logs, style="Secondary.TButton").pack(side=tk.RIGHT)
+        ttk.Button(prog_bar_box, text="Bersihkan", command=self.clear_logs,
+                   style="Secondary.TButton").pack(side=tk.RIGHT)
 
         self.log_text = scrolledtext.ScrolledText(
-            bottom_frame,
+            panel_konsol,
             state="disabled",
-            font=("Consolas", 9),
+            font=FONT_KONSOL,
             bg=CLR_CONSOLE_BG,
             fg=CLR_CONSOLE_TEXT,
             insertbackground=CLR_TEXT,
@@ -205,6 +216,7 @@ class DeployTabMixin:
                 "",
                 "end",
                 iid=str(c["index"]),
+                tags=("genap",) if tampil % 2 == 0 else (),
                 values=(f"#{c['index']}", c["hash"][:8], c["date"], c["author"], c["subject"])
             )
             tampil += 1

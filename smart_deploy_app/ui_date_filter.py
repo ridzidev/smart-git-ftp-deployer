@@ -4,7 +4,8 @@ from datetime import date, datetime, timedelta
 from tkinter import ttk
 
 from .theme import (CLR_BORDER, CLR_DANGER, CLR_PRIMARY, CLR_PRIMARY_HOVER,
-    CLR_SURFACE, CLR_SURFACE_ALT, CLR_TEXT, CLR_TEXT_MUTED)
+    CLR_SURFACE, CLR_SURFACE_ALT, CLR_TEXT, CLR_TEXT_MUTED,
+    FONT_JUDUL, FONT_LABEL, FONT_LABEL_TEBAL,FONT_MINI,FONT_NAVIGASI)
 from .ui_dropdown import TombolDropdown
 
 
@@ -66,10 +67,10 @@ class CalendarPopup(tk.Toplevel):
         self.bulan_tampil = date(self.tanggal_fokus.year, self.tanggal_fokus.month, 1)
 
         self._bangun_tampilan()
+        self._gambar_grid()  # isi seluruh 6 minggu lebih dulu, agar ukuran jendela dihitung lengkap
         self.overrideredirect(True)
         self.transient(widget_jangkar.winfo_toplevel())
         self._posisikan(widget_jangkar)
-        self._gambar_grid()
 
         self.bind("<Escape>", lambda e: self._tutup())
         self.bind("<Return>", lambda e: self._pilih(self.tanggal_fokus))
@@ -103,7 +104,7 @@ class CalendarPopup(tk.Toplevel):
 
         def tombol_nav(teks, sisi, perintah):
             b = tk.Label(kepala, text=teks, bg=CLR_SURFACE, fg=CLR_TEXT,
-                         font=("Segoe UI", 11), padx=7, cursor="hand2")
+                         font=FONT_NAVIGASI, padx=7, cursor="hand2")
             b.pack(side=sisi)
             b.bind("<Button-1>", lambda e: perintah())
             b.bind("<Enter>", lambda e: b.config(fg=CLR_PRIMARY))
@@ -116,18 +117,18 @@ class CalendarPopup(tk.Toplevel):
         tombol_nav("»", tk.RIGHT, lambda: self._nav_bulan(12))
 
         self.lbl_judul = tk.Label(kepala, text="", bg=CLR_SURFACE, fg=CLR_TEXT,
-                                  font=("Segoe UI Bold", 10))
+                                  font=FONT_JUDUL)
         self.lbl_judul.pack(side=tk.LEFT, expand=True)
 
         self.kotak_grid = tk.Frame(konten, bg=CLR_SURFACE)
         self.kotak_grid.pack(fill=tk.X, pady=(6, 0))
         for kolom, nama in enumerate(LABEL_HARI):
             tk.Label(self.kotak_grid, text=nama, bg=CLR_SURFACE, fg=CLR_TEXT_MUTED,
-                     font=("Segoe UI", 8)).grid(row=0, column=kolom, sticky="nsew", pady=(0, 2))
+                     font=FONT_MINI).grid(row=0, column=kolom, sticky="nsew", pady=(0, 2))
         self.kotak_grid.columnconfigure(tuple(range(7)), weight=1)
 
         self.lbl_ringkas = tk.Label(konten, text="", bg=CLR_SURFACE, fg=CLR_TEXT_MUTED,
-                                    font=("Segoe UI", 8), anchor="w")
+                                    font=FONT_MINI, anchor="w")
         self.lbl_ringkas.pack(fill=tk.X, pady=(8, 0))
 
         kaki = tk.Frame(konten, bg=CLR_SURFACE)
@@ -135,7 +136,7 @@ class CalendarPopup(tk.Toplevel):
 
         def tombol_aksi(teks, sisi, perintah, warna=CLR_TEXT):
             b = tk.Label(kaki, text=teks, bg=CLR_SURFACE_ALT, fg=warna,
-                         font=("Segoe UI", 8), padx=8, pady=3, cursor="hand2")
+                         font=FONT_MINI, padx=8, pady=3, cursor="hand2")
             b.pack(side=sisi, padx=2)
             b.bind("<Button-1>", lambda e: perintah())
             return b
@@ -148,7 +149,7 @@ class CalendarPopup(tk.Toplevel):
     def _posisikan(self, jangkar):
         self.update_idletasks()
         lebar = max(self.winfo_reqwidth(), 260)
-        tinggi = self.winfo_reqheight()
+        tinggi = max(self.winfo_reqheight(), 240)
         x = jangkar.winfo_rootx()
         y = jangkar.winfo_rooty() + jangkar.winfo_height() + 2
 
@@ -184,18 +185,18 @@ class CalendarPopup(tk.Toplevel):
                 warna_latar = CLR_SURFACE
                 warna_teks = CLR_TEXT
                 tebal = 0
-                tebal_teks = ("Segoe UI", 9)
+                tebal_teks = FONT_LABEL
 
                 if batas_awal and batas_awal <= d <= batas_akhir:
                     warna_latar = CLR_SURFACE_ALT
                 if d in (d_edit, d_pasangan):
                     warna_latar = CLR_PRIMARY
                     warna_teks = "#FFFFFF"
-                    tebal_teks = ("Segoe UI Bold", 9)
+                    tebal_teks = FONT_LABEL_TEBAL
                 if d == hari_ini:
                     if warna_latar == CLR_SURFACE:
                         warna_teks = CLR_PRIMARY_HOVER
-                    tebal_teks = ("Segoe UI Bold", 9)
+                    tebal_teks = FONT_LABEL_TEBAL
                 if kolom == 6 and d not in (d_edit, d_pasangan):  # kolom Minggu
                     warna_teks = "#F87171"
                 if not dalam_bulan:
@@ -218,7 +219,7 @@ class CalendarPopup(tk.Toplevel):
 
     # ---------- _teks_ringkas ----------
     def _teks_ringkas(self, a, b):
-        fmt = lambda d: d.strftime("%d %b %Y") if d else "—"
+        fmt = lambda d: d.strftime("%Y-%m-%d") if d else "-"
         return f"Endpoint diedit: {fmt(a)}   •   Pasangan: {fmt(b)}"
 
     # ---------- _nav_bulan ----------
@@ -264,16 +265,31 @@ class CalendarPopup(tk.Toplevel):
 class DateRangeFilter(ttk.Frame):
     """Saringan rentang tanggal: preset cepat + dua isian tanggal (dengan kalender)."""
 
-    def __init__(self, master, on_change=None, on_apply=None, teks_tombol="Pilih Rentang Ini"):
+    def __init__(self, master, on_change=None, on_apply=None, teks_tombol="Pilih Rentang Ini", menumpuk=False):
         super().__init__(master)
 
         self.on_change = on_change
         self.on_apply = on_apply
+        self.teks_tombol = teks_tombol
+        self.menumpuk = bool(menumpuk)
         self._rentang = (None, None)   # (dari, sampai) sebagai objek date
         self._dari_preset = False      # penanda agar dropdown tidak ditimpa "Kustom"
         self._galat_aktif = False      # status galat isian sedang ditampilkan
         self._popup = None
 
+        if self.menumpuk:
+            self._bangun_tumpuk()
+        else:
+            self._bangun_samping()
+
+        self.ent_dari.bind("<KeyRelease>", lambda e: self._perbarui())
+        self.ent_sampai.bind("<KeyRelease>", lambda e: self._perbarui())
+        self.ent_dari.bind("<FocusOut>", lambda e: self._perbarui())
+        self.ent_sampai.bind("<FocusOut>", lambda e: self._perbarui())
+
+    # ---------- _bangun_samping ----------
+    def _bangun_samping(self):
+        """Susunan melebar untuk bilah atas (tab Ekspor SQL)."""
         ttk.Label(self, text="Rentang Tanggal:", style="Muted.TLabel").pack(side=tk.LEFT, padx=(0, 6))
 
         self.cmb_preset = TombolDropdown(self, pilihan=DAFTAR_PRESET, nilai=DAFTAR_PRESET[0],
@@ -297,14 +313,44 @@ class DateRangeFilter(ttk.Frame):
         self.lbl_status = ttk.Label(self, text="Semua komit ditampilkan.", style="Muted.TLabel")
         self.lbl_status.pack(side=tk.LEFT, padx=(0, 8), fill=tk.X, expand=True)
 
-        if on_apply:
-            ttk.Button(self, text=teks_tombol, style="Primary.TButton",
+        if self.on_apply:
+            ttk.Button(self, text=self.teks_tombol, style="Primary.TButton",
                        command=self._panggil_terapkan).pack(side=tk.LEFT, padx=2)
 
-        self.ent_dari.bind("<KeyRelease>", lambda e: self._perbarui())
-        self.ent_sampai.bind("<KeyRelease>", lambda e: self._perbarui())
-        self.ent_dari.bind("<FocusOut>", lambda e: self._perbarui())
-        self.ent_sampai.bind("<FocusOut>", lambda e: self._perbarui())
+    # ---------- _bangun_tumpuk ----------
+    def _bangun_tumpuk(self):
+        """Susunan menurun untuk sidebar (tab Deployment Engine)."""
+        ttk.Label(self, text="Rentang Tanggal", style="Muted.TLabel").pack(anchor="w")
+
+        self.cmb_preset = TombolDropdown(self, pilihan=DAFTAR_PRESET, nilai=DAFTAR_PRESET[0],
+                                         on_pilih=self._peristiwa_preset, lebar=18)
+        self.cmb_preset.pack(fill=tk.X, pady=(4, 8))
+
+        baris_dari = ttk.Frame(self)
+        baris_dari.pack(fill=tk.X)
+        ttk.Label(baris_dari, text="Dari:").pack(side=tk.LEFT, padx=(0, 4))
+        self.var_dari = tk.StringVar()
+        self.ent_dari = ttk.Entry(baris_dari, textvariable=self.var_dari, width=10)
+        self.ent_dari.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(baris_dari, text="📅", width=3, style="Secondary.TButton",
+                   command=lambda: self._buka_kalender(self.ent_dari, "dari")).pack(side=tk.LEFT, padx=(4, 0))
+
+        baris_sampai = ttk.Frame(self)
+        baris_sampai.pack(fill=tk.X, pady=(6, 0))
+        ttk.Label(baris_sampai, text="Sampai:").pack(side=tk.LEFT, padx=(0, 4))
+        self.var_sampai = tk.StringVar()
+        self.ent_sampai = ttk.Entry(baris_sampai, textvariable=self.var_sampai, width=10)
+        self.ent_sampai.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(baris_sampai, text="📅", width=3, style="Secondary.TButton",
+                   command=lambda: self._buka_kalender(self.ent_sampai, "sampai")).pack(side=tk.LEFT, padx=(4, 0))
+
+        self.lbl_status = ttk.Label(self, text="Semua komit ditampilkan.", style="Muted.TLabel",
+                                    wraplength=280, justify=tk.LEFT)
+        self.lbl_status.pack(anchor="w", pady=(8, 0))
+
+        if self.on_apply:
+            ttk.Button(self, text=self.teks_tombol, style="Primary.TButton",
+                       command=self._panggil_terapkan).pack(fill=tk.X, pady=(10, 0))
 
     # ---------- Pemanggilan luar ----------
     def get_range(self):
@@ -381,13 +427,13 @@ class DateRangeFilter(ttk.Frame):
         st_s, d2 = parse_isian_tanggal(self.var_sampai.get())
 
         if st_d == TIDAK_SAH or st_s == TIDAK_SAH:
-            self.set_status("Format tak dikenal — gunakan YYYY-MM-DD atau DD/MM/YYYY.", galat=True)
+            self.set_status("Format tak dikenal. Gunakan YYYY-MM-DD atau DD/MM/YYYY.", galat=True)
             return
 
         pesan = ""
         if d1 and d2 and d1 > d2:
             d1, d2 = d2, d1
-            pesan = "Awal melebihi akhir — dibalik otomatis. "
+            pesan = "Awal melebihi akhir: dibalik otomatis. "
 
         aktif = bool(d1 or d2)
         self._rentang = (d1, d2) if aktif else (None, None)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smart Git-FTP Deployer — titik masuk aplikasi.
+"""Smart Git-FTP Deployer: titik masuk aplikasi.
 
 Jalankan dengan: python app.py
 Berkas smart_deploy.py tetap tersedia sebagai pemanggil kompatibilitas.

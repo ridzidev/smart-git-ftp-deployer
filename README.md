@@ -6,7 +6,7 @@ Aplikasi desktop berbasis Python dan Tkinter untuk melakukan deploy proyek Git k
 
 Aplikasi ini cocok dipakai di shared hosting (cPanel atau DirectAdmin) yang tidak menyediakan akses SSH. Dengan begitu, alur deploy berbasis commit tetap bisa berjalan seperti biasa.
 
-Versi 2.5
+Versi 2.6
 
 ![Tampilan utama Deployment Engine](screenshoot1.png)
 
@@ -21,6 +21,7 @@ Versi 2.5
 - Peramban berkas. Menjelajahi struktur direktori lokal dan server dalam satu tampilan.
 - Pemetaan jalur. Folder lokal bisa dipetakan ke folder remote yang berbeda, misalnya dist/ ke public_html/app/.
 - Ekspor riwayat commit ke bentuk query SQL yang bisa disimpan sebagai berkas atau disalin ke clipboard.
+- Tampilan dan kenyamanan: layar pembuka, tab Panduan berisi tutorial interaktif, tab Perubahan untuk riwayat versi, bilah status ringkas, dan jenis huruf yang menyesuaikan sistem operasi.
 - Konsol eksekusi berwarna dengan progres per berkas dan stempel waktu.
 
 ## Persyaratan
@@ -133,6 +134,9 @@ Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 | `smart_deploy_app/ui_exporter.py` | Tab Ekspor SQL |
 | `smart_deploy_app/ui_browser.py` | Tab Peramban Berkas |
 | `smart_deploy_app/ui_config.py` | Tab Konfigurasi |
+| `smart_deploy_app/ui_tutorial.py` | Tab Panduan berisi tutorial interaktif |
+| `smart_deploy_app/ui_changelog.py` | Tab Perubahan berisi riwayat versi |
+| `smart_deploy_app/ui_splash.py` | Layar pembuka aplikasi |
 | `smart_deploy_app/ui_app.py` | Jendela utama (perakitan seluruh tab) |
 
 ## Struktur Antarmuka
@@ -150,7 +154,15 @@ Kontribusi berupa laporan galat, usulan fitur, atau pull request diterima dengan
 
 ## Changelog
 
-### v2.5 (2026-10-21)
+### v2.6 (21 Oktober 2026)
+
+- Layar pembuka menampilkan identitas aplikasi lalu memudar keluar setelah data awal siap.
+- Tab Panduan dengan tutorial interaktif: topik di kiri, langkah penggunaan di kanan, termasuk jalan pintas membuka tab Konfigurasi.
+- Tab Perubahan menampilkan riwayat versi lengkap sejak v1.0 beserta tautan halaman proyek.
+- Tab Deployment Engine dan Ekspor SQL disusun ulang: seluruh kendali dipindah ke satu sidebar di kiri, daftar komit menempati area utama, dan area hasil melebar di bawahnya.
+- Jenis huruf menyesuaikan sistem operasi, kolom isian gelap, baris tabel bertukar warna, tekanan tombol lebih halus, scrollbar gelap, dan bilah status profil serta repositori di bawah jendela.
+
+### v2.5 (21 Oktober 2026)
 
 - `deploy_config.json` kini disimpan sebagai brankas terenkripsi AES-256-GCM. Password FTP tidak lagi ditulis sebagai teks biasa. Kunci brankas berada di `~/.smart_git_ftp_deployer.key` atau variabel lingkungan `SMART_DEPLOY_KEY`, tidak pernah berada di dalam berkas konfigurasi.
 - Penyimpanan ditolak ketika kunci tidak cocok, dengan tujuan melindungi isi brankas asli agar tidak tertimpa konfigurasi kosong.
@@ -158,17 +170,48 @@ Kontribusi berupa laporan galat, usulan fitur, atau pull request diterima dengan
 - Dropdown pilihan digayakan untuk tema gelap, termasuk daftar pada macOS mode gelap yang sebelumnya sulit dibaca.
 - Konfigurasi bentuk lama dimigrasikan otomatis saat pertama kali disimpan. `cryptography` kini menjadi dependensi aplikasi.
 
-### v2.4 (2026-10-21)
+### v2.4 (21 Oktober 2026)
 
 - Saring rentang tanggal pada tab Deployment Engine dan Ekspor SQL. Terdiri dari preset cepat, isian tanggal bebas, dan pemilih tanggal kalender beserta hitungan hasil saringan yang selaras antar daftar.
 
-### v2.3 (2026-10-21)
+### v2.3 (21 Oktober 2026)
 
 - Struktur kode dipecah per pekerjaan ke dalam paket `smart_deploy_app`, mencakup konfigurasi, tema, Git, FTP, serta satu modul per tab antarmuka.
 - `app.py` menjadi titik masuk aplikasi, dan `smart_deploy.py` dijadikan pemanggil kompatibilitas.
 - Perilaku aplikasi tidak berubah. Berkas konfigurasi dan profil lama tetap didukung tanpa penyesuaian.
 
-### v2.2 (2026-10-21)
+### v2.2 (21 Oktober 2026)
 
+Pembaruan besar yang dikemas sepanjang hari ini:
+
+- Tab Ekspor SQL baru: riwayat komit tersaji penuh secara kronologis, bukan lagi 30 komit terakhir. Generator pernyataan `INSERT` dengan preset Semua dan 50 Terakhir, hitung ulang hasil per perubahan pilihan, salin query ke clipboard, serta simpan berkas `.sql`.
+- Deployment Engine: pilih beberapa komit sekaligus, tumpukan berkas dihitung ulang secara langsung, mode eksekusi Bertahap per komit atau Akumulatif sekaligus, tombol Batalkan di tengah proses, dan bar progres dengan status per berkas.
 - Dukungan FTP over TLS (FTPS). Opsi `FTP_TLS` mengenkripsi kanal kontrol dan data pada Deployment Engine maupun peramban server.
-- Berkas `deploy_config.json` otomatis diatur izin `0600` setiap kali aplikasi menyimpannya.
+- Berkas `deploy_config.json` otomatis diatur izin `0600` setiap kali aplikasi menyimpannya, `.env` ikut diabaikan, dan tangkapan layar dokumentasi disensor dari kredensial server.
+- Pola pengecualian bawaan diperluas dan README ditulis ulang seluruhnya.
+
+### Pembaruan pembantu (2026)
+
+Dua penyempurnaan kecil di tengah jalan versi:
+
+- April 2026: klik baris komit pada tabel untuk menyalin detail komit ke clipboard.
+- Agustus 2026: dukungan banyak profil. Satu aplikasi kini mengelola beberapa proyek dan server dengan konfigurasi terpisah per profil.
+
+### v2.1 (5 Januari 2026)
+
+- Tombol Bersihkan Log untuk membersihkan konsol eksekusi tanpa menutup aplikasi.
+
+### v2.0 (5 Januari 2026): Tampilan View v.2
+
+- Tampilan dibangun ulang menyeluruh: tema gelap bernuansa GitHub Dark dengan kartu bagian dan panel geser antar area.
+- Satu jendela menjadi tiga tab: Deployment, Peramban Berkas, dan Konfigurasi.
+- Tombol Quick Deploy satu klik: mendeteksi komit terbaru lalu langsung menjalankan deployment.
+
+### v1.0 (18 Oktober 2025): Rilis Perdana
+
+- Proyek dipublikasikan di GitHub bersama README perdana.
+- Satu berkas `smart_deploy.py` dengan jendela Tkinter.
+- Deployment sadar struktur: membandingkan dua komit, mengunggah berkas baru dan berubah, serta menghapus berkas yang hilang di server.
+- Folder tujuan di server dibuat rekursif, dan folder kosong bekas penghapusan dibersihkan berantai.
+- Tombol uji koneksi FTP plus konsol pesan latar yang aman diakses lintas utas.
+- Pola pengecualian berkas dan konfigurasi aplikasi tersimpan ke berkas lokal.

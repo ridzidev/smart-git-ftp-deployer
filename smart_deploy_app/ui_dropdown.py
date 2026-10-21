@@ -9,7 +9,7 @@ tentukan sendiri, sehingga aman di semua platform.
 import tkinter as tk
 from tkinter import ttk
 
-from .theme import CLR_BORDER, CLR_PRIMARY, CLR_SURFACE, CLR_SURFACE_ALT, CLR_TEXT, CLR_TEXT_MUTED
+from .theme import CLR_BORDER, CLR_PRIMARY, CLR_SURFACE, CLR_SURFACE_ALT, CLR_TEXT, CLR_TEXT_MUTED, FONT_LABEL
 
 
 class TombolDropdown(ttk.Frame):
@@ -83,7 +83,7 @@ class TombolDropdown(ttk.Frame):
             activestyle="none",
             highlightthickness=0,
             borderwidth=0,
-            font=("Segoe UI", 9),
+            font=FONT_LABEL,
             exportselection=False,
             height=min(len(self._pilihan), 12),
         )

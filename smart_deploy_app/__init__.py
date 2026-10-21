@@ -1,4 +1,4 @@
-"""Smart Git-FTP Deployer — paket aplikasi, dipecah per fitur.
+"""Smart Git-FTP Deployer: paket aplikasi, dipecah per fitur.
 
 Modul:
     config        konfigurasi, penyimpanan profil, utilitas jalur

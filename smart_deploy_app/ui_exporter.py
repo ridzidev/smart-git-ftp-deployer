@@ -2,78 +2,89 @@
 import time
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
-from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_TEXT
+from .theme import CLR_CONSOLE_BG, CLR_CONSOLE_TEXT, CLR_ROW_GENAP, CLR_TEXT, FONT_KONSOL, FONT_LABEL_TEBAL
 from .ui_date_filter import DateRangeFilter, tanggal_komit
 
 class ExporterTabMixin:
 
     # ---------- setup_exporter_tab ----------
     def setup_exporter_tab(self):
-        paned = ttk.PanedWindow(self.tab_exporter, orient=tk.VERTICAL)
-        paned.pack(fill=tk.BOTH, expand=True, padx=4, pady=4)
+        paned_tiang = ttk.PanedWindow(self.tab_exporter, orient=tk.HORIZONTAL)
+        paned_tiang.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
 
-        ctrl_frame = ttk.LabelFrame(paned, text=" Parameter Ekspor SQL ", padding=8)
-        paned.add(ctrl_frame, weight=0)
+        # ----- kolom kiri: seluruh paramater ekspor di satu sidebar -----
+        sidebar = ttk.Frame(paned_tiang, padding=(10, 8, 8, 8), width=310)
+        sidebar.pack_propagate(False)
+        paned_tiang.add(sidebar, weight=0)
 
-        r1 = ttk.Frame(ctrl_frame)
-        r1.pack(fill=tk.X, pady=2)
+        self.lbl_export_profile = ttk.Label(sidebar, text=f"Profil: {self.active_profile}", style="Heading.TLabel")
+        self.lbl_export_profile.pack(fill=tk.X)
+        self.lbl_real_total = ttk.Label(sidebar, text="Total Komit: 0", font=FONT_LABEL_TEBAL)
+        self.lbl_real_total.pack(fill=tk.X, pady=(0, 6))
 
-        self.lbl_export_profile = ttk.Label(r1, text=f"Profil: {self.active_profile}", style="Heading.TLabel")
-        self.lbl_export_profile.pack(side=tk.LEFT, padx=(0, 15))
+        ttk.Separator(sidebar).pack(fill=tk.X, pady=6)
 
-        self.lbl_real_total = ttk.Label(r1, text="Total Komit: 0", font=("Segoe UI Bold", 9))
-        self.lbl_real_total.pack(side=tk.LEFT, padx=(0, 20))
-
-        ttk.Label(r1, text="App ID:").pack(side=tk.LEFT, padx=(0, 4))
-        self.ent_sql_appid = ttk.Entry(r1, width=6)
+        # parameter tujuan SQL
+        ttk.Label(sidebar, text="Parameter SQL", style="Muted.TLabel").pack(anchor="w")
+        r_param = ttk.Frame(sidebar)
+        r_param.pack(fill=tk.X, pady=(4, 0))
+        ttk.Label(r_param, text="App ID:").pack(side=tk.LEFT, padx=(0, 4))
+        self.ent_sql_appid = ttk.Entry(r_param, width=5)
         self.ent_sql_appid.insert(0, "1")
-        self.ent_sql_appid.pack(side=tk.LEFT, padx=(0, 10))
-
-        ttk.Label(r1, text="Branch:").pack(side=tk.LEFT, padx=(0, 4))
-        self.ent_sql_branch = ttk.Entry(r1, width=10)
+        self.ent_sql_appid.pack(side=tk.LEFT, padx=(0, 12))
+        ttk.Label(r_param, text="Branch:").pack(side=tk.LEFT, padx=(0, 4))
+        self.ent_sql_branch = ttk.Entry(r_param, width=9)
         self.ent_sql_branch.insert(0, "main")
-        self.ent_sql_branch.pack(side=tk.LEFT, padx=(0, 15))
+        self.ent_sql_branch.pack(side=tk.LEFT)
 
-        ttk.Label(r1, text="Dari No:").pack(side=tk.LEFT, padx=(0, 4))
-        self.ent_range_start = ttk.Entry(r1, width=6)
-        self.ent_range_start.pack(side=tk.LEFT, padx=(0, 8))
+        # rentang nomor komit
+        ttk.Label(sidebar, text="Rentang Nomor", style="Muted.TLabel").pack(anchor="w", pady=(10, 0))
+        r_no = ttk.Frame(sidebar)
+        r_no.pack(fill=tk.X, pady=(4, 0))
+        ttk.Label(r_no, text="Dari No:").pack(side=tk.LEFT, padx=(0, 3))
+        self.ent_range_start = ttk.Entry(r_no, width=6)
+        self.ent_range_start.pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Label(r_no, text="Sampai No:").pack(side=tk.LEFT, padx=(0, 3))
+        self.ent_range_end = ttk.Entry(r_no, width=6)
+        self.ent_range_end.pack(side=tk.LEFT)
 
-        ttk.Label(r1, text="Sampai No:").pack(side=tk.LEFT, padx=(0, 4))
-        self.ent_range_end = ttk.Entry(r1, width=6)
-        self.ent_range_end.pack(side=tk.LEFT, padx=(0, 10))
+        r_preset = ttk.Frame(sidebar)
+        r_preset.pack(fill=tk.X, pady=(8, 0))
+        ttk.Button(r_preset, text="Semua", command=self.preset_select_all,
+                   style="Secondary.TButton").pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        ttk.Button(r_preset, text="50 Terakhir", command=self.preset_select_last_50,
+                   style="Secondary.TButton").pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(sidebar, text="Terapkan Rentang", command=self.apply_export_range,
+                   style="Primary.TButton").pack(fill=tk.X, pady=(8, 0), ipady=5)
 
-        ttk.Button(r1, text="Terapkan Rentang", command=self.apply_export_range, style="Primary.TButton").pack(side=tk.LEFT, padx=3)
-        ttk.Button(r1, text="Semua", command=self.preset_select_all, style="Secondary.TButton").pack(side=tk.LEFT, padx=2)
-        ttk.Button(r1, text="50 Terakhir", command=self.preset_select_last_50, style="Secondary.TButton").pack(side=tk.LEFT, padx=2)
-
-        r1b = ttk.Frame(ctrl_frame)
-        r1b.pack(fill=tk.X, pady=(6, 2))
-
+        # saringan rentang tanggal versi menumpuk
         self.date_filter_export = DateRangeFilter(
-            r1b,
+            sidebar,
             on_change=self.filter_exporter_commits,
             on_apply=self.apply_date_range_export,
             teks_tombol="Pilih Rentang Ini",
+            menumpuk=True
         )
-        self.date_filter_export.pack(fill=tk.X)
+        self.date_filter_export.pack(fill=tk.X, pady=(12, 0))
 
-        r2 = ttk.Frame(ctrl_frame)
-        r2.pack(fill=tk.X, pady=(8, 0))
+        ttk.Separator(sidebar).pack(fill=tk.X, pady=10)
 
-        self.lbl_export_status = ttk.Label(r2, text="", style="Muted.TLabel")
-        self.lbl_export_status.pack(side=tk.LEFT)
+        # status + aksi hasil
+        self.lbl_export_status = ttk.Label(sidebar, text="", style="Muted.TLabel",
+                                           wraplength=280, justify=tk.LEFT)
+        self.lbl_export_status.pack(anchor="w")
 
-        btn_box = ttk.Frame(r2)
-        btn_box.pack(side=tk.RIGHT)
+        ttk.Button(sidebar, text="Salin Query SQL", command=self.copy_sql_to_clipboard,
+                   style="Primary.TButton").pack(fill=tk.X, pady=(14, 0), ipady=6)
+        ttk.Button(sidebar, text="Simpan Berkas .sql", command=self.save_sql_file,
+                   style="Secondary.TButton").pack(fill=tk.X, pady=(6, 0))
 
-        ttk.Button(btn_box, text="Simpan Berkas .sql", command=self.save_sql_file, style="Secondary.TButton").pack(side=tk.LEFT, padx=3)
-        ttk.Button(btn_box, text="Salin Query SQL", command=self.copy_sql_to_clipboard, style="Primary.TButton").pack(side=tk.LEFT, padx=3)
+        # ----- kolom kanan: tabel kronologis di atas, pratinjau SQL melintang di bawah -----
+        paned_kanan = ttk.PanedWindow(paned_tiang, orient=tk.VERTICAL)
+        paned_tiang.add(paned_kanan, weight=1)
 
-        split_content = ttk.PanedWindow(paned, orient=tk.VERTICAL)
-        paned.add(split_content, weight=1)
-
-        tbl_frame = ttk.LabelFrame(split_content, text=" Urutan Kronologis (#1 = Komit Pertama) ", padding=4)
-        split_content.add(tbl_frame, weight=2)
+        tbl_frame = ttk.LabelFrame(paned_kanan, text=" Urutan Kronologis (#1 = Komit Pertama) ", padding=4)
+        paned_kanan.add(tbl_frame, weight=6)
 
         tbl_wrapper = ttk.Frame(tbl_frame)
         tbl_wrapper.pack(fill=tk.BOTH, expand=True)
@@ -101,13 +112,14 @@ class ExporterTabMixin:
 
         self.export_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         exp_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.export_tree.tag_configure("genap", background=CLR_ROW_GENAP)
 
-        sql_frame = ttk.LabelFrame(split_content, text=" Pratinjau Query SQL ", padding=4)
-        split_content.add(sql_frame, weight=1)
+        sql_frame = ttk.LabelFrame(paned_kanan, text=" Pratinjau Query SQL ", padding=4)
+        paned_kanan.add(sql_frame, weight=4)
 
         self.txt_sql_preview = scrolledtext.ScrolledText(
             sql_frame,
-            font=("Consolas", 9),
+            font=FONT_KONSOL,
             bg=CLR_CONSOLE_BG,
             fg=CLR_CONSOLE_TEXT,
             insertbackground=CLR_TEXT,
@@ -153,7 +165,7 @@ class ExporterTabMixin:
                 c["date"],
                 c["author"],
                 c["subject"]
-            ))
+            ), tags=("genap",) if tampil % 2 == 0 else ())
             tampil += 1
 
         if hasattr(self, "date_filter_export"):

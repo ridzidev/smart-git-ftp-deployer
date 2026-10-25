@@ -6,9 +6,20 @@ Aplikasi desktop berbasis Python dan Tkinter untuk melakukan deploy proyek Git k
 
 Aplikasi ini cocok dipakai di shared hosting (cPanel atau DirectAdmin) yang tidak menyediakan akses SSH. Dengan begitu, alur deploy berbasis commit tetap bisa berjalan seperti biasa.
 
-Versi 2.7
+Versi 3.0
 
 ![Tampilan utama Deployment Engine](Screenshot-V2.png)
+![Tampilan Editor Berkas Terintegrasi](editor.png)
+
+## What's New di Versi 3.0
+
+Pembaruan Versi 3.0 menghadirkan fleksibilitas penuh untuk alur kerja deployment dan manajemen berkas langsung di dalam satu aplikasi:
+
+* **Text Editor Terintegrasi:** Modul editor kode bawaan untuk mengedit file langsung di server secara instan tanpa perlu membuka aplikasi editor eksternal, lengkap dengan nomor baris, status bar encoding (UTF-8/LF), dan tombol simpan langsung ke FTP.
+* **Deployment Berbasis Git:** Sinkronisasi cerdas yang hanya mengunggah berkas yang berubah berdasarkan hash komit atau rentang komit tertentu dari repositori lokal.
+* **File Manager FTP Tradisional :** Peramban berkas dua panel (Lokal & Remote) yang mendukung operasi transfer manual seperti unduh, unggah, buat direktori, ubah nama, dan hapus berkas secara langsung.
+
+---
 
 ## Fitur
 
@@ -19,6 +30,7 @@ Versi 2.7
 - Multi profil. Sejumlah konfigurasi server bisa disimpan dalam satu berkas dan dipilih sesuai kebutuhan.
 - Konfigurasi terenkripsi. Berkas konfigurasi disimpan terenkripsi AES-256-GCM sehingga password FTP tidak berjajar sebagai teks biasa.
 - Peramban berkas. Menjelajahi struktur direktori lokal dan server dalam satu tampilan.
+- **Editor teks bawaan.** Berkas remote bisa dibuka dan disunting langsung di samping peramban berkas, lengkap dengan nomor baris, sorot sintaks, cari dan ganti, lalu disimpan kembali ke server dengan Ctrl/Cmd+S.
 - Pemetaan jalur. Folder lokal bisa dipetakan ke folder remote yang berbeda, misalnya dist/ ke public_html/app/.
 - Ekspor riwayat commit ke bentuk query SQL yang bisa disimpan sebagai berkas atau disalin ke clipboard.
 - Tampilan dan kenyamanan: layar pembuka, tab Panduan berisi tutorial interaktif, tab Perubahan untuk riwayat versi, bilah status ringkas, dan jenis huruf yang menyesuaikan sistem operasi.
@@ -133,6 +145,7 @@ Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 | `smart_deploy_app/ui_deploy.py` | Tab Deployment Engine |
 | `smart_deploy_app/ui_exporter.py` | Tab Ekspor SQL |
 | `smart_deploy_app/ui_browser.py` | Tab Peramban Berkas |
+| `smart_deploy_app/ui_editor.py`      | Editor teks bawaan: nomor baris, sorot sintaks, cari dan ganti          |
 | `smart_deploy_app/ui_config.py` | Tab Konfigurasi |
 | `smart_deploy_app/ui_tutorial.py` | Tab Panduan berisi tutorial interaktif |
 | `smart_deploy_app/ui_changelog.py` | Tab Perubahan berisi riwayat versi |
@@ -145,7 +158,7 @@ Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 |---|---|
 | Deployment Engine | Pemilihan commit, saring tanggal, tinjauan antrean berkas, eksekusi, dan log |
 | Ekspor SQL | Menyusun riwayat commit menjadi pernyataan SQL |
-| Peramban Berkas | Menjelajah serta mengunggah dan mengunduh berkas antara lokal dan server |
+| Peramban Berkas | Menjelajah, mengunggah, mengunduh, dan mengedit berkas remote lewat editor bawaan |
 | Konfigurasi | Pengelolaan profil, parameter server, dan pemetaan jalur |
 
 ## Kontribusi
@@ -153,6 +166,13 @@ Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 Kontribusi berupa laporan galat, usulan fitur, atau pull request diterima dengan terbuka. Untuk perubahan besar, buka issue terlebih dahulu agar bisa didiskusikan sebelum diterapkan.
 
 ## Changelog
+
+### v3.0 (25 Oktober 2026)
+
+- Editor teks bawaan di tab Peramban Berkas: memilih berkas remote membuka editor di samping daftar berkas.
+- Editor dibuat sendiri dengan Tkinter tanpa dependensi baru: nomor baris, sorot sintaks (Python, PHP, JavaScript, HTML, CSS, JSON, SQL, shell, konfigurasi), cari dan ganti, indentasi otomatis, Tab dan Shift+Tab untuk blok, serta undo dan redo.
+- Simpan dengan Ctrl/Cmd+S langsung mengunggah ke server. Penanda belum tersimpan tampil di bilah editor dan ada konfirmasi sebelum perubahan dibuang.
+- Sandi berkas dan akhir baris dipertahankan (UTF-8 dengan atau tanpa BOM, LF atau CRLF). Berkas biner dan berkas di atas 2 MB tidak dibuka di editor.
 
 ### v2.7 (21 Oktober 2026)
 

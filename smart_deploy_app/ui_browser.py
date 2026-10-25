@@ -6,6 +6,7 @@ transfer, overlay status Git di panel lokal, dan saklar sinkron navigasi.
 """
 import datetime as dt
 import ftplib
+import io
 import os
 import shutil
 import subprocess
@@ -14,6 +15,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 
 from .config import log_queue, should_exclude
+from .ui_editor import CodeEditor, MAX_BYTES
 from .theme import (CLR_DANGER, CLR_ROW_GENAP, CLR_SUCCESS, CLR_TEXT_MUTED,
                     CLR_WARNING, NAMA_FONT)
 
@@ -88,6 +90,7 @@ class BrowserTabMixin:
 
         paned_tiang = ttk.PanedWindow(self.tab_browser, orient=tk.HORIZONTAL)
         paned_tiang.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
+        self._paned_tiang = paned_tiang
 
         # ---------- panel lokal ----------
         panel_lokal = ttk.LabelFrame(paned_tiang, text=" Direktori Lokal ", padding=6)
@@ -177,6 +180,16 @@ class BrowserTabMixin:
 
         self.remote_tree = self._bangun_tree(panel_server, "server")
 
+        # ---------- panel editor (v3.0), muncul saat berkas server dipilih ----------
+        self._editor_dibuka = False
+        self._editor_memuat = False
+        self._editor_server_id = None
+        self.panel_editor = ttk.LabelFrame(paned_tiang, text=" Editor ", padding=0)
+        self.editor = CodeEditor(self.panel_editor,
+                                 on_save=self._simpan_dari_editor,
+                                 on_close=self._sembunyikan_editor)
+        self.editor.pack(fill=tk.BOTH, expand=True)
+
         self._bangun_menu()
         self._putuskan_server()
         self.after(100, self.refresh_local_root)
@@ -205,7 +218,7 @@ class BrowserTabMixin:
         tree.bind("<Double-1>", lambda e: self._dobel_klik(panel))
         tree.bind("<Button-2>", lambda e: self._menu_popup(panel, e))
         tree.bind("<Button-3>", lambda e: self._menu_popup(panel, e))
-        tree.bind("<<TreeviewSelect>>", lambda e, p=panel: setattr(self, "_panel_pilihan", p))
+        tree.bind("<<TreeviewSelect>>", lambda e, p=panel: self._pilihan_berubah(p))
         return tree
 
     # ---------- _bangun_menu ----------
@@ -562,7 +575,7 @@ class BrowserTabMixin:
         elif panel == "lokal":
             self._unggah()
         else:
-            self._unduh()
+            self._buka_di_editor(iid)
 
     def _rows_terpilih(self, panel):
         tree = self.local_tree if panel == "lokal" else self.remote_tree
@@ -982,6 +995,109 @@ class BrowserTabMixin:
         finally:
             menu.grab_release()
         return "break"
+
+    # ---------- editor teks bawaan (v3.0) ----------
+    def _pilihan_berubah(self, panel):
+        self._panel_pilihan = panel
+        if panel != "server":
+            return
+        terpilih = self._rows_terpilih("server")
+        if len(terpilih) != 1 or terpilih[0][1] != TIPE_FILE:
+            return
+        self._buka_di_editor(terpilih[0][0])
+
+    def _buka_di_editor(self, jalur):
+        if self._editor_memuat or self._ops_sibuk:
+            return
+        entri = next((b for b in self._cache_server if b["path"] == jalur), None)
+        if entri is None or entri["jenis"] != TIPE_FILE:
+            return
+        if self._editor_dibuka and self.editor.path == jalur:
+            return
+        if entri["ukuran"] is not None and entri["ukuran"] > MAX_BYTES:
+            self.lbl_browser_status.config(text="Berkas lebih dari 2 MB, tidak dibuka di editor.")
+            return
+
+        self._editor_memuat = True
+        self.lbl_browser_status.config(text="Membuka " + entri["nama"] + " ...")
+
+        def kerja():
+            data, galat = None, None
+            try:
+                if not self._ensure_browser_ftp():
+                    galat = "Koneksi ke server gagal."
+                else:
+                    buf = bytearray()
+                    with self.ftp_lock:
+                        self.browser_ftp.retrbinary("RETR " + jalur, buf.extend)
+                    data = bytes(buf)
+            except Exception:
+                log_queue.put("[ERROR] Gagal membaca berkas dari server untuk editor.")
+                galat = "Gagal membaca berkas dari server."
+            self.after(0, lambda: self._editor_siap(jalur, data, galat))
+
+        threading.Thread(target=kerja, daemon=True).start()
+
+    def _editor_siap(self, jalur, data, galat):
+        self._editor_memuat = False
+        if galat:
+            self.lbl_browser_status.config(text=galat)
+            return
+        self._tampilkan_editor()
+        if self.editor.open_file(jalur, data):
+            self._editor_server_id = (self.config_data.get("FTP_HOST"),
+                                      self.config_data.get("FTP_USER"))
+            self.lbl_browser_status.config(text="Mengedit " + os.path.basename(jalur))
+        else:
+            self.lbl_browser_status.config(text="Siap.")
+            if self.editor.path is None:
+                self._sembunyikan_editor()
+
+    def _tampilkan_editor(self):
+        if not self._editor_dibuka:
+            self._paned_tiang.add(self.panel_editor, weight=2)
+            self._editor_dibuka = True
+
+    def _sembunyikan_editor(self):
+        if self._editor_dibuka:
+            try:
+                self._paned_tiang.forget(self.panel_editor)
+            except tk.TclError:
+                pass
+            self._editor_dibuka = False
+        self._editor_server_id = None
+
+    def _simpan_dari_editor(self, jalur, data):
+        """Dipanggil editor saat Simpan. Mengembalikan False bila gagal."""
+        sekarang = (self.config_data.get("FTP_HOST"), self.config_data.get("FTP_USER"))
+        if sekarang != self._editor_server_id:
+            messagebox.showwarning(
+                "Editor",
+                "Profil server sudah berganti sejak berkas dibuka. "
+                "Berkas tidak disimpan agar tidak menimpa server yang salah.",
+                parent=self)
+            return False
+        if self._ops_sibuk:
+            self.lbl_browser_status.config(text="Ada operasi berjalan. Coba simpan lagi sebentar lagi.")
+            return False
+        if not self._ensure_browser_ftp():
+            self.lbl_browser_status.config(text="Koneksi ke server gagal.")
+            return False
+        if not self.ftp_lock.acquire(timeout=8):
+            self.lbl_browser_status.config(text="Server sedang sibuk. Coba lagi sebentar lagi.")
+            return False
+        try:
+            self.browser_ftp.storbinary("STOR " + jalur, io.BytesIO(data))
+        except Exception:
+            log_queue.put("[ERROR] Gagal menyimpan " + jalur + " dari editor.")
+            self.lbl_browser_status.config(text="Gagal menyimpan ke server. Cek konsol.")
+            return False
+        finally:
+            self.ftp_lock.release()
+        log_queue.put("[FTP] Berkas disimpan dari editor: " + jalur)
+        self.lbl_browser_status.config(text="Tersimpan: " + os.path.basename(jalur))
+        self._nav_server(self._server_path)
+        return True
 
     # ---------- dotfile ----------
     def _dotfile_berubah(self):

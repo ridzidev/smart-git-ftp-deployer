@@ -11,6 +11,19 @@ FON_VERSI = (NAMA_FONT, 12, "bold")
 FON_TAUTAN = (NAMA_FONT, 9, "underline")
 
 RIWAYAT_VERSI = [
+    ("v3.0", "25 Oktober 2026", [
+        "Editor teks bawaan di tab Peramban Berkas: memilih satu berkas di panel server membuka "
+        "editor di samping daftar berkas, lalu isinya bisa disunting langsung.",
+        "Editor dibuat sendiri dengan Tkinter tanpa dependensi baru: nomor baris, sorot sintaks "
+        "(Python, PHP, JavaScript, HTML, CSS, JSON, SQL, shell, konfigurasi), cari dan ganti, "
+        "indentasi otomatis, Tab dan Shift+Tab untuk blok, serta undo dan redo.",
+        "Simpan dengan Ctrl atau Cmd+S langsung mengunggah ke server. Penanda belum tersimpan tampil "
+        "di bilah editor, dan ada konfirmasi sebelum perubahan dibuang.",
+        "Sandi berkas dan akhir baris dipertahankan (UTF-8 dengan atau tanpa BOM, LF atau CRLF). "
+        "Berkas biner dan berkas di atas 2 MB tidak dibuka di editor.",
+        "Penyimpanan ditolak bila profil server sudah berganti sejak berkas dibuka, supaya tidak "
+        "menimpa server yang salah.",
+    ]),
     ("v2.7", "21 Oktober 2026", [
         "Tab Peramban Berkas dibangun ulang menyerupai pengelola berkas FTP: daftar datar berkolom "
         "Nama, Ukuran, dan Diubah dengan ikon, bilah alamat per panel, tombol Naik dan Root, baris "

@@ -85,7 +85,6 @@ class BrowserTabMixin:
         self._token_server = 0
         self.akar_lokal = os.path.abspath(self.config_data.get("LOCAL_DIR", "."))
         self._server_path = self.config_data.get("REMOTE_DIR") or "/"
-        self.var_dotfile = tk.BooleanVar(value=False)
         self.var_sinkron = tk.BooleanVar(value=False)
 
         paned_tiang = ttk.PanedWindow(self.tab_browser, orient=tk.HORIZONTAL)
@@ -113,10 +112,6 @@ class BrowserTabMixin:
         self.lbl_info_lokal.pack(fill=tk.X, pady=(4, 2))
 
         self.local_tree = self._bangun_tree(panel_lokal, "lokal")
-
-        ttk.Checkbutton(panel_lokal, text="Tampilkan berkas tersembunyi (dotfile)",
-                        variable=self.var_dotfile, style="TCheckbutton",
-                        command=self._dotfile_berubah).pack(anchor="w", pady=(4, 0))
 
         # ---------- rail aksi ----------
         rail = ttk.LabelFrame(paned_tiang, text=" Aksi ", padding=8)
@@ -207,8 +202,9 @@ class BrowserTabMixin:
 
         scroll = ttk.Scrollbar(induk, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=scroll.set)
-        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # scrollbar dahulu supaya tak terdorong keluar saat panel sempit
         scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         tree.tag_configure("genap", background=CLR_ROW_GENAP)
         tree.tag_configure("git_baru", foreground=CLR_SUCCESS)
@@ -316,8 +312,6 @@ class BrowserTabMixin:
             entris = []
 
         for e in entris:
-            if e.name.startswith(".") and not self.var_dotfile.get():
-                continue
             jenis = TIPE_DIR if e.is_dir(follow_symlinks=False) else TIPE_FILE
             try:
                 info = e.stat(follow_symlinks=False)
@@ -390,10 +384,9 @@ class BrowserTabMixin:
         self.lbl_info_server.config(text=f"Memuat {target} ...")
         self._token_server += 1
         token = self._token_server
-        tampil_dot = bool(self.var_dotfile.get())
 
         def kerja():
-            baris, tersambung = self._baca_isi_server(target, tampil_dot)
+            baris, tersambung = self._baca_isi_server(target)
             self.after(0, lambda: self._setelah_isi_server(target, baris, token, tersambung))
 
         threading.Thread(target=kerja, daemon=True).start()
@@ -423,7 +416,7 @@ class BrowserTabMixin:
                 log_queue.put("[ERROR] Koneksi ke server gagal. Periksa host, user, dan password di tab Konfigurasi.")
                 return False
 
-    def _baca_isi_server(self, jalur, tampil_dot):
+    def _baca_isi_server(self, jalur):
         """Ambil daftar isi folder server. Hasil: (baris, apakah tersambung)."""
         if not self._ensure_browser_ftp():
             return [], False
@@ -431,15 +424,12 @@ class BrowserTabMixin:
             with self.ftp_lock:
                 try:
                     hasil = []
-                    filter_dot = not tampil_dot
                     for nama, fakta in self.browser_ftp.mlsd(
                             path=jalur, facts=["type", "size", "modify"]):
                         if nama in (".", ".."):
                             continue
                         tipe = fakta.get("type", "")
                         if tipe in ("cdir", "pdir"):
-                            continue
-                        if nama.startswith(".") and filter_dot:
                             continue
                         try:
                             ukuran = int(str(fakta.get("size", "")).strip())
@@ -462,7 +452,6 @@ class BrowserTabMixin:
                 except Exception:
                     # cadangan: perintah LIST klasik bila server tanpa MLSD
                     hasil = []
-                    filter_dot = not tampil_dot
                     self.browser_ftp.cwd(jalur)
                     garis = []
                     self.browser_ftp.retrlines("LIST", garis.append)
@@ -474,7 +463,7 @@ class BrowserTabMixin:
                         if len(potongan) < 9:
                             continue
                         nama = " ".join(potongan[8:])
-                        if nama in (".", "..") or nama.startswith(".") and filter_dot:
+                        if nama in (".", ".."):
                             continue
                         jenis = TIPE_DIR if teks.startswith("d") else TIPE_FILE
                         try:
@@ -695,8 +684,6 @@ class BrowserTabMixin:
         acuan = folder.rstrip(os.sep)
         for akar, _nama, berkas in os.walk(acuan):
             for n in berkas:
-                if n.startswith(".") and not self.var_dotfile.get():
-                    continue
                 penuh = os.path.join(akar, n)
                 try:
                     ukuran = os.path.getsize(penuh)
@@ -729,7 +716,6 @@ class BrowserTabMixin:
             return
 
         self.lbl_browser_status.config(text="Menyusun daftar unduhan ...")
-        tampil_dot = bool(self.var_dotfile.get())
 
         def kerja_kumpul():
             tugas = []
@@ -747,7 +733,7 @@ class BrowserTabMixin:
                             tugas.append((jalur, os.path.basename(jalur), ukuran))
                         else:
                             tugas.extend(self._kumpulkan_server(
-                                jalur, os.path.basename(jalur), tampil_dot))
+                                jalur, os.path.basename(jalur)))
             except Exception:
                 log_queue.put("[ERROR] Gagal membaca pilihan dari server.")
                 self.after(0, lambda: self._selesai_ops("Penentuan daftar unduhan gagal. Cek konsol."))
@@ -795,7 +781,7 @@ class BrowserTabMixin:
 
         threading.Thread(target=kerja, daemon=True).start()
 
-    def _kumpulkan_server(self, folder, nama_folder, tampil_dot):
+    def _kumpulkan_server(self, folder, nama_folder):
         """Seluruh berkas di bawah folder server, diambil secara rekursif."""
         hasil = []
         for nama, fakta in self.browser_ftp.mlsd(path=folder, facts=["type", "size"]):
@@ -806,10 +792,8 @@ class BrowserTabMixin:
                 continue
             full = _gabung_server(folder, nama)
             if tipe == "dir":
-                hasil.extend(self._kumpulkan_server(full, f"{nama_folder}/{nama}", tampil_dot))
+                hasil.extend(self._kumpulkan_server(full, f"{nama_folder}/{nama}"))
             else:
-                if nama.startswith(".") and not self.var_dotfile.get():
-                    continue
                 try:
                     ukuran = int(str(fakta.get("size", "")).strip())
                 except ValueError:
@@ -1098,9 +1082,3 @@ class BrowserTabMixin:
         self.lbl_browser_status.config(text="Tersimpan: " + os.path.basename(jalur))
         self._nav_server(self._server_path)
         return True
-
-    # ---------- dotfile ----------
-    def _dotfile_berubah(self):
-        self._isi_lokal(self.ent_alamat_lokal.get())
-        if self.browser_ftp is not None:
-            self._nav_server(self._server_path)

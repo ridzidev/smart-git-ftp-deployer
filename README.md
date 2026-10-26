@@ -6,7 +6,7 @@ Aplikasi desktop berbasis Python dan Tkinter untuk melakukan deploy proyek Git k
 
 Aplikasi ini cocok dipakai di shared hosting (cPanel atau DirectAdmin) yang tidak menyediakan akses SSH. Dengan begitu, alur deploy berbasis commit tetap bisa berjalan seperti biasa.
 
-Versi 3.0.1
+Versi 3.0.2
 
 ![Tampilan utama Deployment Engine](Screenshot-V2.png)
 ![Tampilan Editor Berkas Terintegrasi](editor.png)
@@ -166,6 +166,11 @@ Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 Kontribusi berupa laporan galat, usulan fitur, atau pull request diterima dengan terbuka. Untuk perubahan besar, buka issue terlebih dahulu agar bisa didiskusikan sebelum diterapkan.
 
 ## Changelog
+
+### v3.0.2 (26 Oktober 2026)
+
+- Perbaikan: berkas tersembunyi berawalan titik (contoh `htdocs/.htaccess`, `.well-known`) kini selalu ditampilkan di kedua panel Peramban Berkas dan selalu ikut dalam unggah maupun unduh folder (tetap patuh pola pengecualian seperti `.env`). Saklar dotfile yang sebelumnya terjepit di balik daftar berkas sehingga praktis tak terlihat dihapus.
+- Perbaikan: scrollbar daftar berkas tidak lagi terdorong keluar saat panel menyempit.
 
 ### v3.0.1 (26 Oktober 2026)
 

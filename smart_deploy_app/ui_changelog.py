@@ -11,6 +11,12 @@ FON_VERSI = (NAMA_FONT, 12, "bold")
 FON_TAUTAN = (NAMA_FONT, 9, "underline")
 
 RIWAYAT_VERSI = [
+    ("v3.0.2", "26 Oktober 2026", [
+        "Perbaikan: berkas tersembunyi berawalan titik, contoh htdocs/.htaccess atau .well-known, "
+        "kini selalu ditampilkan di kedua panel Peramban Berkas dan selalu ikut dalam unggah maupun "
+        "unduh folder. Saklar dotfile yang sebelumnya terjepit sehingga praktis tak terlihat dihapus.",
+        "Perbaikan: scrollbar daftar berkas tidak lagi terdorong keluar saat panel menyempit.",
+    ]),
     ("v3.0.1", "26 Oktober 2026", [
         "Perbaikan: berkas yang diganti nama atau dipindah kini diperlakukan sebagai hapus path lama "
         "lalu unggah path baru. Sebelumnya path baru terunggah tetapi berkas lama tertinggal di server.",

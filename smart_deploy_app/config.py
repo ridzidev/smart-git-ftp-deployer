@@ -6,7 +6,7 @@ from queue import Queue
 
 from .secure_store import FORMAT_BRAKAS, buka_brankas, dokumen_brankas, GagalBrankas
 
-APP_VERSION = "3.0.1"
+APP_VERSION = "3.0.2"
 
 
 CONFIG_FILENAME = "deploy_config.json"

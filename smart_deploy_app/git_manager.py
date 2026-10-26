@@ -51,7 +51,7 @@ class GitManager:
     # ---------- get_changed_files ----------
     def get_changed_files(self, older_hash, newer_hash, exclude_patterns):
         if older_hash == newer_hash:
-            command = ["git", "show", "--pretty=", "--name-status", newer_hash]
+            command = ["git", "show", "--pretty=", "--name-status", "--no-renames", newer_hash]
         else:
             parent_check = subprocess.run(
                 ["git", "rev-parse", "--verify", f"{older_hash}^"],
@@ -61,7 +61,7 @@ class GitManager:
                 base_ref = f"{older_hash}^"
             else:
                 base_ref = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
-            command = ["git", "diff", "--name-status", base_ref, newer_hash]
+            command = ["git", "diff", "--name-status", "--no-renames", base_ref, newer_hash]
 
         try:
             result = subprocess.run(command, cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8")

@@ -6,7 +6,7 @@ Aplikasi desktop berbasis Python dan Tkinter untuk melakukan deploy proyek Git k
 
 Aplikasi ini cocok dipakai di shared hosting (cPanel atau DirectAdmin) yang tidak menyediakan akses SSH. Dengan begitu, alur deploy berbasis commit tetap bisa berjalan seperti biasa.
 
-Versi 3.0
+Versi 3.0.1
 
 ![Tampilan utama Deployment Engine](Screenshot-V2.png)
 ![Tampilan Editor Berkas Terintegrasi](editor.png)
@@ -23,7 +23,7 @@ Pembaruan Versi 3.0 menghadirkan fleksibilitas penuh untuk alur kerja deployment
 
 ## Fitur
 
-- Deployment berbasis commit. Pilih satu commit atau rentang commit, lalu aplikasi menghitung berkas yang ditambahkan, diubah, dan dihapus dari diff Git.
+- Deployment berbasis commit. Pilih satu commit atau rentang commit, lalu aplikasi menghitung berkas yang ditambahkan, diubah, dan dihapus dari diff Git. Berkas yang diganti nama atau dipindah diproses sebagai hapus path lama lalu unggah path baru.
 - Saring rentang tanggal. Menu preset cepat seperti 7 hari terakhir, bulan lalu, atau tahun lalu, lengkap dengan pemilih tanggal kalender. Hitungan hasil saringan tampil langsung, tersedia di tab Deployment Engine dan Ekspor SQL.
 - Dua mode eksekusi, yaitu bertahap (satu commit diproses satu per satu) dan akumulatif (satu batch untuk satu rentang). Ada opsi berhenti saat galat dan tombol batalkan di tengah proses.
 - FTP dan FTPS. Aktifkan opsi FTP over TLS untuk mengenkripsi kanal kontrol dan data.
@@ -166,6 +166,11 @@ Kode aplikasi dikumpulkan per pekerjaan dalam paket `smart_deploy_app/`:
 Kontribusi berupa laporan galat, usulan fitur, atau pull request diterima dengan terbuka. Untuk perubahan besar, buka issue terlebih dahulu agar bisa didiskusikan sebelum diterapkan.
 
 ## Changelog
+
+### v3.0.1 (26 Oktober 2026)
+
+- Perbaikan: berkas yang diganti nama atau dipindah kini diperlakukan sebagai hapus path lama lalu unggah path baru. Sebelumnya path baru terunggah tetapi berkas lama tertinggal di server.
+- Perhitungan perubahan memakai git diff tanpa deteksi rename, sehingga hasilnya sama di semua pengaturan Git.
 
 ### v3.0 (25 Oktober 2026)
 
